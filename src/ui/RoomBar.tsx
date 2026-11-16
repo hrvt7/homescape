@@ -4,6 +4,7 @@ import { activeLevel, useLayout } from '@/model/layoutStore'
 import { useView } from '@/scene/camera'
 import { t } from '@/i18n'
 import { fmt, type RoomStats } from './useHome'
+import { useWheelScrollX } from './useWheelScrollX'
 
 /** Bottom bar: rooms; a click selects the room and moves the camera there */
 export default function RoomBar({ stats }: { stats: Record<string, RoomStats> }) {
@@ -13,6 +14,8 @@ export default function RoomBar({ stats }: { stats: Record<string, RoomStats> })
   const request = useView((s) => s.request)
   // Street surfaces (road, sidewalk, crosswalk, parking) are not rooms of the home: not in the bar
   const rooms = (level?.rooms ?? []).filter((r) => !isStreetSurface(r))
+  // The room list is a horizontal row: a plain mouse wheel scrolls it sideways (ui/useWheelScrollX.ts)
+  const row = useWheelScrollX<HTMLDivElement>()
 
   return (
     <nav className="glass pointer-events-auto absolute inset-x-3 bottom-3 z-30 flex items-center gap-2 rounded-2xl px-2.5 py-2 lg:inset-x-4 lg:bottom-4">
@@ -28,7 +31,7 @@ export default function RoomBar({ stats }: { stats: Record<string, RoomStats> })
         <House size={16} />
         <span className="hidden sm:inline">{t('Whole home')}</span>
       </button>
-      <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto [scrollbar-width:none]">
+      <div ref={row} data-wheel-row="rooms" className="flex min-w-0 flex-1 gap-2 overflow-x-auto [scrollbar-width:none]">
         {rooms.map((r) => {
           const s = stats[r.id]
           const active = selection?.type === 'room' && selection.id === r.id

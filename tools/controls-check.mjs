@@ -380,14 +380,19 @@ if (spot) {
   }
 }
 
-// --- Build bar: a plain mouse wheel scrolls the tab row and the card row sideways, and does not zoom the camera ---
+// --- Horizontal rows: a plain mouse wheel scrolls the build bar's tab and card rows (Edit) and the room bar (View)
+// sideways, and does not zoom the camera ---
 {
-  await H(() => window.__homescape.setMode('edit'))
-  // A narrower window so both rows overflow
-  await p.setViewportSize({ width: 1100, height: 900 })
-  await p.waitForTimeout(800)
-  for (const row of ['tabs', 'cards']) {
-    const sel = `nav[aria-label="Build bar"] [data-wheel-row="${row}"]`
+  // Narrower windows so every row overflows (the test home has few rooms: the room bar needs a phone-size window)
+  for (const [row, mode, bar, width] of [
+    ['tabs', 'edit', "build bar's tab", 1100],
+    ['cards', 'edit', "build bar's card", 1100],
+    ['rooms', 'view', 'room bar', 560],
+  ]) {
+    await p.setViewportSize({ width, height: 900 })
+    await H((m) => window.__homescape.setMode(m), mode)
+    await p.waitForTimeout(900)
+    const sel = `[data-wheel-row="${row}"]`
     await p.$eval(sel, (el) => {
       el.scrollLeft = 0
     })
@@ -407,8 +412,9 @@ if (spot) {
     await p.waitForTimeout(400)
     const after = await p.$eval(sel, (el) => el.scrollLeft)
     const c1 = await cam()
-    ok(before.over > 0 && after > before.left + 50 && Math.abs(c1.distance - c0.distance) < 1e-3, `A mouse wheel over the build bar's ${row} row scrolls it sideways (${before.left} to ${Math.round(after)} of ${before.over} px), the camera does not zoom (distance ${c0.distance.toFixed(3)} to ${c1.distance.toFixed(3)})`)
+    ok(before.over > 0 && after > before.left + 50 && Math.abs(c1.distance - c0.distance) < 1e-3, `A mouse wheel over the ${bar} row scrolls it sideways (${before.left} to ${Math.round(after)} of ${before.over} px), the camera does not zoom (distance ${c0.distance.toFixed(3)} to ${c1.distance.toFixed(3)})`)
   }
+  await H(() => window.__homescape.setMode('edit'))
   await p.setViewportSize({ width: 1600, height: 900 })
   await p.waitForTimeout(500)
 }
