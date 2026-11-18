@@ -239,15 +239,19 @@ export function Ripple({ active, color, at = [0, 0.03, 1] }: { active: boolean; 
   )
 }
 
-/** Spins its children around the given axis (like fan blades). Stops when speed is 0. */
-export function Spin({ speed, axis = 'z', children }: { speed: number; axis?: 'y' | 'z'; children: React.ReactNode }) {
+/** Spins its children around the given axis (like fan blades). Stops when speed is 0. name: for the test hook (dev/sceneProbe.ts) */
+export function Spin({ speed, axis = 'z', name, children }: { speed: number; axis?: 'y' | 'z'; name?: string; children: React.ReactNode }) {
   const g = useRef<THREE.Group>(null)
   useAmbient(Boolean(speed))
   useFrame((_, dt) => {
     // No big jumps at a low frame rate.
     if (g.current && speed) g.current.rotation[axis] += Math.min(dt, 0.1) * speed
   })
-  return <group ref={g}>{children}</group>
+  return (
+    <group ref={g} name={name}>
+      {children}
+    </group>
+  )
 }
 
 /** Rotation that eases toward a value (like a door opening). Requests frames and shadows until done. */

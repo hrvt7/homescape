@@ -808,6 +808,55 @@ export function Multicooker({ v }: P) {
   )
 }
 
+/** Fruit pieces in the blender jar: position on the drink's surface, size, color */
+const BLENDER_FRUIT: [number, number, number, string][] = [
+  [0.034, 0.004, 0.02, '#e2304a'],
+  [-0.03, 0.022, 0.018, '#f3d36b'],
+  [0.006, -0.036, 0.016, '#7cc35a'],
+  [-0.012, -0.004, 0.014, '#e2304a'],
+]
+
+/**
+ * Blender (on a counter): motor base with a dial and a light strip, a glass jar with a lid and a handle, a pink smoothie
+ * with fruit pieces on top. While on (its plug, or a fan entity: faster at a higher percentage) the strip lights up and
+ * the drink spins with its fruit pieces (the part named "blender-contents").
+ */
+export function Blender({ v }: P) {
+  const body = bodyOf(v, '#2a2c33')
+  const strip = useLitMaterial('#4a4e5a', v.on, '#7ad7ff', 1, 2)
+  const pct = v.domain === 'fan' ? num(v.attrs.percentage) : null
+  const speed = v.on && !v.unavailable ? 14 + ((pct ?? 60) / 100) * 16 : 0
+  const glass = clear('#9fbdd6', 0.42, 0.04)
+  return (
+    <group>
+      {/* motor base: dial and light strip at the front */}
+      <Box size={[0.16, 0.1, 0.15]} position={[0, 0.05, 0]} color={body} radius={0.02} />
+      <Cyl r={0.022} h={0.014} position={[0, 0.048, 0.077]} rotation={[Math.PI / 2, 0, 0]} color="#c9ccd4" segments={18} />
+      <Box size={[0.1, 0.008, 0.004]} position={[0, 0.085, 0.0755]} material={strip} shadow={false} />
+      {/* jar: collar, glass, lid with a cap, handle on the side */}
+      <Cyl r={0.062} h={0.02} position={[0, 0.11, 0]} color={body} segments={24} />
+      <Cyl r={0.062} rTop={0.072} h={0.22} position={[0, 0.23, 0]} material={glass} segments={24} shadow={false} />
+      <Cyl r={0.075} h={0.018} position={[0, 0.349, 0]} color={body} segments={24} />
+      <Cyl r={0.022} h={0.02} position={[0, 0.367, 0]} color="#c9ccd4" segments={14} />
+      <Box size={[0.014, 0.15, 0.03]} position={[0.092, 0.24, 0]} color={body} radius={0.005} />
+      {[0.17, 0.31].map((y) => (
+        <Box key={y} size={[0.026, 0.014, 0.022]} position={[0.08, y, 0]} color={body} shadow={false} />
+      ))}
+      {/* the drink, its surface and the fruit pieces spin together while on */}
+      <Cyl r={0.06} rTop={0.065} h={0.12} position={[0, 0.18, 0]} color="#e46a8c" segments={24} shadow={false} />
+      <group position={[0, 0.24, 0]}>
+        <Spin speed={speed} axis="y" name="blender-contents">
+          <Box size={[0.1, 0.003, 0.012]} position={[0, 0.002, 0]} color="#f3a3b8" shadow={false} />
+          {BLENDER_FRUIT.map(([x, z, s, c]) => (
+            <Box key={`${x}${z}`} size={[s, s, s]} position={[x, s / 3, z]} rotation={[0.4, x * 20, 0.3]} color={c} shadow={false} />
+          ))}
+        </Spin>
+      </group>
+      {v.on && <Glow position={[0, 0.09, 0.09]} color="#7ad7ff" opacity={v.night ? 0.45 : 0.2} size={0.18} />}
+    </group>
+  )
+}
+
 /**
  * Chest freezer (on the floor): a white chest whose lid opens while a bound lid sensor is open; a frost blue light shines
  * inside then. A bound temperature sensor shows on its small display.

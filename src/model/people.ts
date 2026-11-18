@@ -383,6 +383,7 @@ const TOUCH: Partial<Record<ItemKind, number>> = {
   kettle: 0.2,
   microwave: 0.2,
   airFryer: 0.2,
+  blender: 0.2,
   washer: 0.8,
   dishwasher: 0.8,
   stove: 0.9,

@@ -270,6 +270,7 @@ export type ItemKind =
   | 'ups'
   | 'toaster'
   | 'multicooker'
+  | 'blender'
   | 'freezer'
   | 'wineFridge'
   | 'ironingBoard'

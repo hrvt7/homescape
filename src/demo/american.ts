@@ -487,9 +487,10 @@ function groundFloor(): Level {
   wall(garage, 'left', 7.2, 'solarInverter', bind('sensor.us_solar_power'))
   put('ups', 10.6, 3.85, 0, { ...bind('binary_sensor.us_ups_power'), y: 0.9 })
 
-  /* --- kitchen: a toaster and a multicooker on the counters, a wine fridge, a chest freezer in the garage --- */
+  /* --- kitchen: a toaster, a multicooker and a blender on the counters, a wine fridge, a chest freezer in the garage --- */
   put('toaster', 0.95, 0.33, 0, { ...bind('switch.us_toaster'), y: ON_COUNTER })
   put('multicooker', 3.75, 0.35, 0, { ...bind('switch.us_multicooker'), y: ON_COUNTER })
+  put('blender', 1.55, 0.32, 0, { ...bind('switch.us_blender'), y: ON_COUNTER })
   wall(kitchen, 'front', 3.6, 'wineFridge', bind('light.us_wine_fridge'))
   put('freezer', 9.8, 8.6, 0, bind('sensor.us_freezer_temperature', 'binary_sensor.us_freezer_lid'))
 
@@ -991,6 +992,7 @@ export function americanEntities(): HassEntity[] {
     ent('climate.us_sauna', 'off', t('Garden Sauna'), { hvac_modes: ['off', 'heat'], current_temperature: 22, temperature: 80, supported_features: 1 }),
     sw('us_toaster', t('Toaster'), false),
     sw('us_multicooker', t('Multicooker'), true),
+    sw('us_blender', t('Blender'), false),
     light('us_wine_fridge', t('Wine Fridge Light'), true, warm(160, 4000)),
     sensor('us_freezer_temperature', t('Freezer Temperature'), -18, 'temperature', '°C'),
     bin('us_freezer_lid', t('Freezer Lid'), false, 'opening'),

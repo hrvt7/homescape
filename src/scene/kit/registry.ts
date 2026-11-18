@@ -222,6 +222,7 @@ export const KIT: Record<ItemKind, ComponentType<{ v: Visual }>> = {
   ups: H.Ups,
   toaster: H.Toaster,
   multicooker: H.Multicooker,
+  blender: H.Blender,
   freezer: H.Freezer,
   wineFridge: H.WineFridge,
   ironingBoard: H.IroningBoard,

@@ -113,6 +113,7 @@ const KETTLE = kw(/kettle|su ısıtıcı|su isitici|wasserkocher|hervidor|bouill
 const MICROWAVE = kw(/mikrodalga|microwave|mikrowelle|microond|micro-ondes|micro ondes|magnetron|mikrofal|микроволнов|電子レンジ|전자레인지|微波炉|माइक्रोवेव/)
 const AIR_FRYER =
   kw(/airfryer|air fryer|fritöz|fritoz|fritteuse|freidora|friteuse|friggitrice|frituurpan|frytkownica|fritadeira|фритюрниц|аэрофритюр|ノンフライヤー|에어프라이어|空气炸锅|एयर फ्रायर/)
+const BLENDER = kw(/blender|smoothie|licuadora|liquidificador|frullatore|mixeur|standmixer|блендер|ブレンダー|블렌더|믹서기|搅拌机|破壁机|料理机|ब्लेंडर/)
 const ROUTER = kw(/router|routeur|modem|роутер|маршрутизатор|ルーター|공유기|路由器|राउटर/)
 const PRINTER = kw(/yazıcı|yazici|printer|drucker|impres|imprimante|stampante|drukarka|принтер|プリンター|프린터|打印机|प्रिंटर/)
 const PET_FEEDER = kw(/mama|feeder|futterautomat|futterspender|comedero|comedouro|croquette|distributore di cibo|voerautomaat|karmnik|кормушк|кормилк|給餌|급식기|喂食器|फीडर/)
@@ -429,6 +430,7 @@ export function kindFor(e: HassEntity, model = ''): ItemKind | null {
       if (KETTLE.test(n)) return 'kettle'
       if (MICROWAVE.test(n)) return 'microwave'
       if (AIR_FRYER.test(n)) return 'airFryer'
+      if (BLENDER.test(n)) return 'blender'
       if (PROJECTOR.test(n)) return 'projector'
       if (ROUTER.test(n)) return 'router'
       if (/\bnas\b|synology|qnap/.test(n)) return 'nas'
@@ -578,6 +580,7 @@ const ON_SURFACE: Partial<Record<ItemKind, ItemKind[]>> = {
   kettle: ['kitchenCounter'],
   microwave: ['kitchenCounter'],
   airFryer: ['kitchenCounter'],
+  blender: ['kitchenCounter'],
   speaker: ['tvUnit', 'nightstand', 'desk', 'dresser', 'shoeCabinet'],
   soundbar: ['tvUnit'],
   computer: ['desk'],

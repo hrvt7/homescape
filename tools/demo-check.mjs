@@ -335,6 +335,28 @@ ok(
   await p.waitForTimeout(500)
   body.back = (await part('phone', 'phone-body'))?.opacity
   ok(body.home === 1 && body.away < 0.5 && body.back === 1, `The phone on the office desk turns see-through while its tracker is away (opacity ${body.home} / ${body.away} / ${body.back})`)
+  // The blender on the kitchen counter: its contents spin while the plug is on and stand still when it is off
+  const spin = async () => {
+    const a = (await part('blender', 'blender-contents'))?.rot[1]
+    await p.waitForTimeout(400)
+    const b = (await part('blender', 'blender-contents'))?.rot[1]
+    return a == null || b == null ? null : Math.abs(b - a)
+  }
+  const still = await spin()
+  await set('switch.us_blender', 'on')
+  await p.waitForTimeout(300)
+  const blending = await spin()
+  await set('switch.us_blender', 'off')
+  await p.waitForTimeout(300)
+  const stopped = await spin()
+  ok(still === 0 && blending > 0.5 && stopped === 0, `The blender's contents spin while its plug is on (turned ${blending?.toFixed(2)} rad in 0.4 s; off: ${still}, ${stopped})`)
+  const floor = await p.evaluate(async () => {
+    const rules = await import('/src/model/rules.ts')
+    const lv = window.__homescape.getState().layout.layout.levels.find((l) => (l.elevation ?? 0) === 0)
+    const it = lv.items.find((i) => i.kind === 'blender')
+    return { onFloor: rules.checkItem(lv, { ...it, y: undefined, x: 0.5, z: 2.0 }, it.id), onCounter: rules.checkItem(lv, it, it.id) }
+  })
+  ok(!floor.onFloor.ok && floor.onCounter.ok, `The blender stands on the counter, not on the floor (${floor.onFloor.reason})`)
 }
 
 // --- People: rooms with motion and a computer that is on; the plan uses more than one room ---

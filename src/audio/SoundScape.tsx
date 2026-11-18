@@ -157,6 +157,8 @@ function itemVoice(it: Item, main: HassEntity | undefined, rel: HassEntity[]): {
       return busy(all) ? { voice: 'dishwasher', gain: 0.7 } : null
     case 'microwave':
       return on ? { voice: 'microwave', gain: 0.7 } : null
+    case 'blender':
+      return on ? { voice: 'fan', p: 1, gain: 0.8 } : null
     case 'coffeeMachine':
       return on ? { voice: 'coffee', gain: 0.7 } : null
     case 'kettle':

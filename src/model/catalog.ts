@@ -295,6 +295,8 @@ export const CATALOG: Record<ItemKind, KindMeta> = {
   toaster: { label: t('Toaster'), group: 'appliance', domains: ['switch'], size: [0.28, 0.17], labelY: 0.35 },
   // Multicooker or rice cooker: steam and a lit display while on
   multicooker: { label: t('Multicooker'), group: 'appliance', domains: ['switch', 'sensor'], size: [0.3, 0.3], labelY: 0.4 },
+  // Blender on a counter: the jar's contents spin while its plug (or fan entity) is on
+  blender: { label: t('Blender'), group: 'appliance', domains: ['switch', 'fan'], size: [0.18, 0.18], labelY: 0.5 },
   // Chest freezer: the lid opens with a bound lid sensor, a temperature on its display
   freezer: { label: t('Chest freezer'), group: 'appliance', domains: ['sensor', 'binary_sensor', 'switch'], size: [1.0, 0.65], labelY: 1.1 },
   // Wine fridge by a wall; the bottles light up while on
