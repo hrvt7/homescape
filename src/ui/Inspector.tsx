@@ -4,7 +4,7 @@ import { canToggle, toggle, turnOffAll } from '@/ha/actions'
 import { friendlyName, isActive, relativeTime, stateLabel } from '@/ha/derive'
 import { useHa } from '@/ha/store'
 import { bindingsOf, boundAnywhere, emitsLight, isBound, ledOf, ledSource } from '@/model/bindings'
-import { BEAM, BODY_COLORS, CATALOG, CONSOLE_LEN, consoleModel, isSlidingDoor, isWallOpening, ITEM_PRESETS, OPENING_DOOR_H, OPENING_FULL_H, OPTIONS, RESIZABLE, RESIZABLE2, SLIDING_DOOR, sizeOf, TOP_COLORS, WALL_OPENING } from '@/model/catalog'
+import { BEAM, BODY_COLORS, CATALOG, CONSOLE_LEN, consoleModel, GARAGE_DOOR, isSlidingDoor, isWallOpening, ITEM_PRESETS, OPENING_DOOR_H, OPENING_FULL_H, OPTIONS, RESIZABLE, RESIZABLE2, SLIDING_DOOR, sizeOf, TOP_COLORS, WALL_OPENING } from '@/model/catalog'
 import { kindFor, modelName, variantFor } from '@/model/generate'
 import { doorSides, isOutdoor, isStreetSurface, rectsOf, roomArea, roomAt, wallLengthAt, wallSnap, type Side } from '@/model/geometry'
 import { groupFamily, groupMates, heatingSummary } from '@/model/groups'
@@ -449,13 +449,13 @@ function tvHeight(item: Item, variant: string) {
 /** Settings of items like desks and cabinets: length, drawers, top and body color. */
 function FurnitureOptions({ item }: { item: Item }) {
   const opt = OPTIONS[item.kind]
-  // A sliding glass door and a wall opening have their own width; a hinged door has none to set
-  const range = item.kind === 'door' ? (isSlidingDoor(item) ? SLIDING_DOOR : isWallOpening(item) ? WALL_OPENING : undefined) : RESIZABLE[item.kind]
+  // A sliding glass door, a wall opening and a garage door have their own width; a hinged door has none to set
+  const range = item.kind === 'door' ? (isSlidingDoor(item) ? SLIDING_DOOR : isWallOpening(item) ? WALL_OPENING : undefined) : item.kind === 'garageDoor' ? GARAGE_DOOR : RESIZABLE[item.kind]
   const range2 = RESIZABLE2[item.kind]
   const { updateItem, checkpoint } = useLayout.getState()
   if (!opt && !range) return null
-  // A kind can give its own default (the Christmas tree's len is its height, 2 m)
-  const len = item.len ?? (range && 'def' in range ? range.def : undefined) ?? CATALOG[item.kind].size[0]
+  // A kind can give its own default (the Christmas tree's len is its height, 2 m; a garage door is 2.4 m wide)
+  const len = item.len ?? (item.kind === 'garageDoor' ? GARAGE_DOOR.def : undefined) ?? (range && 'def' in range ? range.def : undefined) ?? CATALOG[item.kind].size[0]
   const len2 = item.len2 ?? range2?.def ?? 0
   const isL = item.variant === 'lLeft' || item.variant === 'lRight'
   /**

@@ -5,6 +5,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { deviceClass, domainOf, isActive, lightColor, lightLevel, num } from '@/ha/derive'
 import type { HassEntity } from '@/ha/types'
+import { GARAGE_DOOR } from '@/model/catalog'
 import { APERTURE_INSET, WALL_CUT_H, WALL_H, WALL_INNER_H, WALL_T } from '@/model/geometry'
 import { U_FLIGHT, U_GAP, U_LANDING, U_SIZE, wallSides } from '@/model/stairs'
 import { roofView, useView } from '../camera'
@@ -2384,11 +2385,11 @@ export function StairwellRail({ edges }: { edges: { a: { x: number; z: number };
 
 /*
  * Same local layout as Door (APERTURE_INSET = 0.21): room boundary at z = -0.21, wall -0.26..-0.16; the door panels sit
- * just in front of the wall's inner face. Opening 2.4 × 2.25 m. The panels rise on the vertical track, turn inwards (+z)
- * through an arc of radius R below the ceiling and run along the horizontal track.
+ * just in front of the wall's inner face. Opening W × 2.25 m (W: Item.len, 2.4 m unless set; model/catalog.ts >
+ * GARAGE_DOOR). The panels rise on the vertical track, turn inwards (+z) through an arc of radius R below the ceiling and
+ * run along the horizontal track.
  */
 const GD_EDGE = -APERTURE_INSET
-const GD_W = 2.4
 const GD_H = 2.25
 const GD_PANELS = 4
 const GD_PH = GD_H / GD_PANELS
@@ -2413,26 +2414,32 @@ function trackAt(s: number, out: { y: number; z: number }) {
   }
 }
 
-/** Door panel: main slab with raised panels on both faces (a dark glass band on the top panel) (built once). */
-function garagePanelGeometry(glass: boolean) {
-  return cached(`gd-panel-${glass}`, () => {
-    const parts: Part[] = [{ g: boxG(GD_W - 0.02, GD_PH - 0.012, 0.045), c: '#f3f4fb' }]
+/**
+ * Door panel W wide: main slab with raised panels on both faces, one per 1.2 m or so (a dark glass band on the top panel)
+ * (built once per width).
+ */
+function garagePanelGeometry(glass: boolean, W: number) {
+  return cached(`gd-panel-${glass}-${W}`, () => {
+    const parts: Part[] = [{ g: boxG(W - 0.02, GD_PH - 0.012, 0.045), c: '#f3f4fb' }]
+    const n = Math.max(2, Math.round(W / 1.2))
+    const pitch = W / n
     for (const z of [-0.025, 0.025])
-      for (const x of [-0.6, 0.6]) {
-        if (glass) for (const dx of [-0.25, 0.25]) parts.push({ g: boxG(0.4, GD_PH * 0.42, 0.006), p: [x + dx, 0, z], c: '#2a3550' })
-        else parts.push({ g: boxG(1.0, GD_PH * 0.55, 0.006), p: [x, 0, z], c: '#e1e4ee' })
+      for (let i = 0; i < n; i++) {
+        const x = -W / 2 + pitch * (i + 0.5)
+        if (glass) for (const dx of [-0.21, 0.21]) parts.push({ g: boxG(pitch / 3, GD_PH * 0.42, 0.006), p: [x + dx * pitch, 0, z], c: '#2a3550' })
+        else parts.push({ g: boxG(pitch - 0.2, GD_PH * 0.55, 0.006), p: [x, 0, z], c: '#e1e4ee' })
       }
     return merge(parts)
   })
 }
 
-/** Curved track pieces, horizontal tracks and the opener rail (built once). */
-function garageTracksGeometry() {
-  return cached('gd-tracks', () => {
+/** Curved track pieces, horizontal tracks and the opener rail (built once per width). */
+function garageTracksGeometry(W: number) {
+  return cached(`gd-tracks-${W}`, () => {
     const parts: Part[] = []
     for (const sx of [-1, 1]) {
-      parts.push({ g: new THREE.TorusGeometry(GD_R, 0.02, 4, 10, Math.PI / 2), p: [sx * 1.215, GD_H, GD_Z + GD_R], r: [0, Math.PI / 2, 0] })
-      parts.push({ g: boxG(0.04, 0.05, 2.1), p: [sx * 1.215, GD_H + GD_R, GD_Z + GD_R + 1.05] })
+      parts.push({ g: new THREE.TorusGeometry(GD_R, 0.02, 4, 10, Math.PI / 2), p: [sx * (W / 2 + 0.015), GD_H, GD_Z + GD_R], r: [0, Math.PI / 2, 0] })
+      parts.push({ g: boxG(0.04, 0.05, 2.1), p: [sx * (W / 2 + 0.015), GD_H + GD_R, GD_Z + GD_R + 1.05] })
     }
     parts.push({ g: boxG(0.05, 0.04, 2.5), p: [0, GD_H + GD_R + 0.03, GD_Z + 1.4] })
     return merge(parts)
@@ -2483,7 +2490,8 @@ function useWallHeight(ref: React.RefObject<THREE.Group | null>, interior: boole
 }
 
 /**
- * Garage door (wall opening like Door; footprint 2.6 × 0.2, opening 2.4 × 2.25 m): frame (two sides and top), threshold,
+ * Garage door (wall opening like Door; footprint (W + 0.2) × 0.2, opening W × 2.25 m, W 2.4 m unless its card sets another
+ * width (Item.len): a double door for two cars is 4.8 m): frame (two sides and top), threshold,
  * sectional door of four horizontal panels (glass band on the top panel), vertical tracks, curved and horizontal tracks
  * at the ceiling, motorized opener. Opening: the cover's current_position / 100, else fully open for open / opening,
  * otherwise closed; v.on (a door sensor) also counts as open. While opening the panels slide up, turn inwards (+z) through
@@ -2491,6 +2499,7 @@ function useWallHeight(ref: React.RefObject<THREE.Group | null>, interior: boole
  * wall is low (cut exterior wall, plan view) the door lowers with it, and an open door's panels are hidden.
  */
 export function GarageDoor({ v }: P) {
+  const W = Math.round((v.opts.len ?? GARAGE_DOOR.def) * 100) / 100
   const root = useRef<THREE.Group>(null)
   const tall = useRef<THREE.Group>(null)
   const chain = useRef<THREE.Group>(null)
@@ -2528,11 +2537,11 @@ export function GarageDoor({ v }: P) {
   return (
     <group ref={root}>
       <group ref={tall}>
-        <Box size={[0.1, GD_H + 0.04, 0.24]} position={[-GD_W / 2 - 0.05, (GD_H + 0.04) / 2, GD_EDGE]} color={frame} />
-        <Box size={[0.1, GD_H + 0.04, 0.24]} position={[GD_W / 2 + 0.05, (GD_H + 0.04) / 2, GD_EDGE]} color={frame} />
-        <Box size={[GD_W + 0.2, 0.1, 0.24]} position={[0, GD_H + 0.05, GD_EDGE]} color={frame} />
+        <Box size={[0.1, GD_H + 0.04, 0.24]} position={[-W / 2 - 0.05, (GD_H + 0.04) / 2, GD_EDGE]} color={frame} />
+        <Box size={[0.1, GD_H + 0.04, 0.24]} position={[W / 2 + 0.05, (GD_H + 0.04) / 2, GD_EDGE]} color={frame} />
+        <Box size={[W + 0.2, 0.1, 0.24]} position={[0, GD_H + 0.05, GD_EDGE]} color={frame} />
         {[-1, 1].map((sx) => (
-          <Box key={sx} size={[0.04, GD_H, 0.05]} position={[sx * 1.215, GD_H / 2, GD_Z]} material={steel} shadow={false} />
+          <Box key={sx} size={[0.04, GD_H, 0.05]} position={[sx * (W / 2 + 0.015), GD_H / 2, GD_Z]} material={steel} shadow={false} />
         ))}
         <group ref={chain}>
           {Array.from({ length: GD_PANELS }, (_, i) => (
@@ -2541,7 +2550,7 @@ export function GarageDoor({ v }: P) {
               ref={(m) => {
                 panels.current[i] = m
               }}
-              geometry={garagePanelGeometry(i === GD_PANELS - 1)}
+              geometry={garagePanelGeometry(i === GD_PANELS - 1, W)}
               material={vcMat(0.55)}
               castShadow
               receiveShadow
@@ -2549,9 +2558,9 @@ export function GarageDoor({ v }: P) {
           ))}
         </group>
       </group>
-      <Box size={[GD_W, 0.012, 0.22]} position={[0, 0.006, GD_EDGE]} color={C.concrete} shadow={false} />
+      <Box size={[W, 0.012, 0.22]} position={[0, 0.006, GD_EDGE]} color={C.concrete} shadow={false} />
       {/* ceiling tracks and opener */}
-      <M g={garageTracksGeometry()} m={steel} shadow={false} />
+      <M g={garageTracksGeometry(W)} m={steel} shadow={false} />
       <Box size={[0.3, 0.13, 0.4]} position={[0, GD_H + GD_R - 0.02, GD_Z + 2.75]} color={C.offWhite} radius={0.03} />
       <Ball r={0.015} position={[0, GD_H + GD_R - 0.09, GD_Z + 2.9]} material={led} shadow={false} />
     </group>

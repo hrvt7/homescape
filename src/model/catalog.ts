@@ -1122,6 +1122,13 @@ export const WALL_OPENING = { min: 0.6, max: 4, def: 1.2, label: t('Width') }
 export const OPENING_DOOR_H = 2.23
 export const OPENING_FULL_H = 2.6
 export const isWallOpening = (it: { kind: ItemKind; variant?: string }) => it.kind === 'door' && it.variant === 'opening'
+/**
+ * Garage door (GitHub issue #10): the opening is Item.len wide, from a single door (2.4 m) to a double door for two cars
+ * (4.8 m); the frame adds 10 cm on each side (sizeOf). The wall cut, walking, pets and daylight follow it
+ * (geometry.ts > apertureOf).
+ */
+export const GARAGE_DOOR = { min: 2.2, max: 5.5, def: 2.4, label: t('Door width') }
+export const garageDoorWidth = (it: { len?: number }) => it.len ?? GARAGE_DOOR.def
 /** Width of a door item (m): set in the card for a sliding glass door or a wall opening, 1 m for a hinged door */
 export const doorWidth = (it: { kind: ItemKind; variant?: string; len?: number }) =>
   isSlidingDoor(it) ? (it.len ?? SLIDING_DOOR.def) : isWallOpening(it) ? (it.len ?? WALL_OPENING.def) : 1
@@ -1159,6 +1166,8 @@ export const ITEM_PRESETS: ItemPreset[] = [
   { id: 'doorSliding', kind: 'door', label: t('Sliding glass door'), sub: t('slides open'), extra: { variant: 'sliding', len: SLIDING_DOOR.def } },
   // A passage cut into the wall with no door (an open plan with a wall stub, a hallway arch)
   { id: 'wallOpening', kind: 'door', label: t('Wall opening'), sub: t('no door'), extra: { variant: 'opening', len: WALL_OPENING.def } },
+  // A garage door for two cars side by side; the width is set in its card
+  { id: 'garageDoorDouble', kind: 'garageDoor', label: t('Double garage door'), sub: t('two cars wide'), extra: { len: 4.8 } },
   // The power strip can hang on the wall too
   { id: 'powerStripWall', kind: 'powerStrip', label: t('Wall power strip'), sub: t('wall mounted · 2-8 outlets'), extra: { mount: 'wall' } },
   // A longer island with the sink in the middle and the dishwasher beside it; the card changes both
@@ -1189,6 +1198,8 @@ export function sizeOf(kind: ItemKind, len?: number, len2?: number): [number, nu
   const [w, d] = CATALOG[kind].size
   // The second size only for kinds that use it as depth (ceiling strip, rug); the L arm of a counter is computed separately.
   if (kind === 'ceilingStrip' || kind === 'rug' || kind === 'doormat' || kind === 'pool' || kind === 'kitchenIsland' || kind === 'stairs') return [len ?? w, len2 ?? d]
+  // A garage door: its opening and the frame
+  if (kind === 'garageDoor') return [(len ?? GARAGE_DOOR.def) + 0.2, d]
   // A ceiling fan is round: the blade span in both directions
   if (kind === 'ceilingFan') return [len ?? w, len ?? d]
   // A Christmas tree's len is its height; the round footprint grows with it

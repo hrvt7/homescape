@@ -50,8 +50,9 @@ entities; you shape it further directly in 3D.
   (reorder and hide cards, rooms and devices, pin favorites), and search (⌘K).
 - **Build your plan in 3D**: draw rooms and wall segments, add floors and roofs, place more than 150 kinds of furniture,
   devices and outdoor items, bind them to entities. Leave walls out, make them half walls or cut doorless openings into
-  them for open-plan spaces: each room keeps its own name and Home Assistant area. Several homes, each with its own
-  floors.
+  them for open-plan spaces: each room keeps its own name and Home Assistant area. Straight or U-shaped stairs (walls
+  along them if you like), L-shaped sofas and counters, tall kitchen cabinets, garage doors as wide as two cars. The
+  item search matches types and English names in any language. Several homes, each with its own floors.
 - **Houses and flats**: an apartment mode for a flat on any floor of a building, with the street far below and no roof.
 - **Walk through it**: a first-person mode with the real sun position, stairs between floors and doors that open.
 - **Life in the house**: people go where your motion, occupancy or presence sensors detect someone, watch TV, sleep at

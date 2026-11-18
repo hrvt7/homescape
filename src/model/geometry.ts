@@ -1,4 +1,4 @@
-import { CATALOG, isSlidingDoor, isWallOpening, OPENING_DOOR_H, SLIDING_DOOR, sizeOf, WALL_OPENING, WINDOW_BOTTOM, windowSize } from './catalog'
+import { CATALOG, garageDoorWidth, isSlidingDoor, isWallOpening, OPENING_DOOR_H, SLIDING_DOOR, sizeOf, WALL_OPENING, WINDOW_BOTTOM, windowSize } from './catalog'
 import type { Item, Level, Rect, Room, RoomType } from './types'
 
 /*
@@ -357,7 +357,7 @@ export interface Opening {
 const APERTURE: Record<string, { half: number; y0: number; y1: number }> = {
   door: { half: 0.5, y0: 0, y1: 2.23 },
   window: { half: 0.58, y0: 0.9, y1: 2.1 },
-  // Garage door: 2.4 m wide, 2.25 m high (kit/outdoor.tsx > GarageDoor)
+  // Garage door: 2.25 m high, 2.4 m wide unless its card says otherwise (Item.len; kit/outdoor.tsx > GarageDoor)
   garageDoor: { half: 1.2, y0: 0, y1: 2.25 },
 }
 
@@ -384,7 +384,9 @@ export function apertureOf(it: Item) {
       ? { ...base, half: (it.len ?? SLIDING_DOOR.def) / 2 }
       : isWallOpening(it)
         ? { half: (it.len ?? WALL_OPENING.def) / 2, y0: 0, y1: Math.min(WALL_H, it.len2 ?? OPENING_DOOR_H) }
-        : base
+        : it.kind === 'garageDoor'
+          ? { ...base, half: garageDoorWidth(it) / 2 }
+          : base
   const fx = Math.sin(it.rot)
   const fz = Math.cos(it.rot)
   if (Math.abs(Math.abs(fz) - 1) < 0.01) return { horizontal: true, line: it.z - Math.sign(fz) * APERTURE_INSET, along: it.x, ...spec }

@@ -286,6 +286,58 @@ await p.getByRole('button', { name: 'Doors and windows' }).first().click()
 await settle()
 const bar2 = await p.textContent('body')
 ok(/Wall opening/.test(bar2) && /no door/.test(bar2), 'The item bar offers a "Wall opening"')
+ok(/Double garage door/.test(bar2) && /two cars wide/.test(bar2), 'The item bar offers a "Double garage door"')
+
+// --- Garage door width (GitHub issue #10): from a single 2.4 m door to a double one for two cars; the wall cut, walking,
+// pets and the cars inside follow the width ---
+await p.evaluate(() => {
+  const h = window.__homescape
+  const L = h.getState().layout
+  L.addRoom({ name: 'Garage', floor: 'concrete', x: 30, z: 0, w: 7, d: 6, type: 'garage' })
+  L.addRoom({ name: 'Drive', floor: 'concrete', x: 30, z: 6, w: 7, d: 4, type: 'garden' })
+  L.addItems([{ id: 'gd', kind: 'garageDoor', x: 33.5, z: 5.79, rot: Math.PI }])
+  h.setMode('edit')
+  h.select({ type: 'item', id: 'gd' })
+})
+await p.waitForSelector('#len-gd')
+await settle()
+const garage = () =>
+  p.evaluate(async () => {
+    const geo = await import('/src/model/geometry.ts')
+    const fps = await import('/src/scene/fps.ts')
+    const pets = await import('/src/model/pets.ts')
+    const rules = await import('/src/model/rules.ts')
+    const lv = window.__homescape.getState().layout.layout.levels[0]
+    const it = lv.items.find((i) => i.id === 'gd')
+    const room = lv.rooms.find((r) => r.name === 'Garage')
+    const run = geo.wallRuns(room, lv.rooms).find((r) => r.horizontal && Math.abs(r.line - 6) < 1e-6)
+    const ops = run ? geo.runOpenings(run, lv.items) : []
+    // 2 m to the right of the door's middle: a wall beside a single door, inside a double one
+    const x = it.x + 2
+    const walkBlocked = fps.buildColliders(lv).segs.some((g) => Math.abs(g.z1 - 6) < 0.06 && Math.abs(g.z2 - 6) < 0.06 && Math.min(g.x1, g.x2) < x && Math.max(g.x1, g.x2) > x)
+    const dogPasses = pets.lineFree(pets.buildPetGrid(lv, 'dog'), { x, z: 5.2 }, { x, z: 6.8 }, true)
+    // Two cars side by side behind the door, nose to the door
+    const car = (cx) => rules.checkItem(lv, { kind: 'car', x: cx, z: 3, rot: Math.PI }, undefined)
+    return { it, half: geo.apertureOf(it)?.half, ops, walkBlocked, dogPasses, cars: [car(it.x - 1.25), car(it.x + 1.25)].map((c) => c.ok) }
+  })
+let gd = await garage()
+const gdCard = await p.textContent('#side-panel')
+ok(/Door width/.test(gdCard) && gd.half === 1.2 && gd.ops.length === 1 && Math.abs(span(gd.ops[0]) - 2.4) < 1e-6 && gd.walkBlocked && !gd.dogPasses, `A garage door is 2.4 m wide by default, its card has a width (${span(gd.ops[0]).toFixed(2)} m cut; 2 m from its middle the wall stops walking and the dog)`)
+await p.locator('#len-gd').fill('4.8')
+await settle()
+gd = await garage()
+ok(gd.it.len === 4.8 && gd.half === 2.4 && Math.abs(span(gd.ops[0]) - 4.8) < 1e-6, `The width slider makes it a double door: the wall cut follows (${span(gd.ops[0]).toFixed(2)} m)`)
+ok(!gd.walkBlocked && gd.dogPasses, 'Walking and the dog pass through the whole width of the double door')
+ok(gd.cars.every(Boolean), `Two cars park side by side behind the double door (${gd.cars.join(', ')})`)
+const gdSize = await p.evaluate(() => window.__homescape.itemObject('gd').then((o) => o.size[0]))
+ok(gdSize > 4.9 && gdSize < 5.4, `The door is drawn as wide as set, frame included (${gdSize.toFixed(2)} m)`)
+await p.evaluate(() => {
+  window.__homescape.select(null)
+  window.__homescape.setMode('view')
+  window.__homescape.focusRoom(window.__homescape.getState().layout.layout.levels[0].rooms.find((r) => r.name === 'Garage').id)
+})
+await p.waitForTimeout(1500)
+await p.screenshot({ path: 'shots/windows-garage-double.png' })
 
 ok(errors.length === 0, `No page errors (${errors.slice(0, 3).join(' / ')})`)
 await b.close()
