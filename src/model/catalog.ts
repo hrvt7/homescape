@@ -120,6 +120,8 @@ export const CATALOG: Record<ItemKind, KindMeta> = {
   dryer: { label: t('Dryer'), group: 'appliance', domains: ['switch', 'sensor', 'binary_sensor'], size: [0.6, 0.6], labelY: 1.1, wall: true },
   dishwasher: { label: t('Dishwasher'), group: 'appliance', domains: ['switch', 'sensor', 'binary_sensor'], size: [0.6, 0.6], labelY: 1.1, wall: true },
   oven: { label: t('Oven'), group: 'appliance', domains: ['switch', 'sensor', 'climate'], size: [0.6, 0.6], labelY: 1.15, wall: true },
+  // Tall kitchen cabinet, a single 60 cm column: a pantry, a built-in oven and microwave, or a built-in fridge
+  tallCabinet: { label: t('Tall kitchen cabinet'), group: 'appliance', domains: ['switch', 'sensor', 'climate'], size: [0.6, 0.6], labelY: 2.35, wall: true },
   waterDispenser: { label: t('Water dispenser'), group: 'appliance', domains: ['switch', 'sensor'], size: [0.34, 0.36], labelY: 1.6, wall: true },
 
   wallFan: { label: t('Wall fan'), group: 'climate', domains: ['fan', 'switch'], size: [0.42, 0.3], labelY: 2.4, wall: true },
@@ -703,6 +705,17 @@ export const OPTIONS: Partial<
     note: t("Bind the fan's own entity (fan) or its plug: while it is on the blades spin, faster at a higher percentage."),
   },
   oven: { variantLabel: t('Placement'), variants: [['under', t('Under the counter')], ['tall', t('Tall unit (eye level)')]] },
+  tallCabinet: {
+    variantLabel: t('Type'),
+    variants: [
+      ['pantry', t('Pantry')],
+      ['oven', t('Oven and microwave')],
+      ['fridge', t('Fridge')],
+    ],
+    variantDef: 'pantry',
+    body: t('Cabinet color'),
+    note: t('Its doors open like the kitchen cabinets and things can go on its shelves. Bind the oven to see the oven column glow while it is on.'),
+  },
   desk: { top: t('Top color'), body: t('Leg and drawer color'), drawers: true },
   gamingChair: { body: t('Seat color'), bodyDef: '#1f2440', top: t('Stripe color'), topList: ACCENT_COLORS, topDef: '#e2564b' },
   tvUnit: { top: t('Door color'), body: t('Body color') },

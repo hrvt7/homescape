@@ -387,6 +387,51 @@ await p.click('#fps-toggle')
 await p.waitForTimeout(300)
 await p.evaluate((room) => window.__homescape.getState().layout.deleteRoom(room), k.room)
 
+// --- Tall kitchen cabinet (GitHub issue #10): a pantry, an oven column and a fridge column; each type has its own
+// compartments, things go on the pantry shelves and into the fridge, it stands freely like a counter ---
+const tc = await p.evaluate(() => {
+  const s = window.__homescape.getState().layout
+  s.setMode('edit')
+  const room = s.addRoom({ name: 'Column room', floor: 'tile', x: 220, z: 0, w: 4, d: 3 })
+  const at = (x, variant) => s.addItem('tallCabinet', x, 0.36, 0, null, undefined, { variant })
+  return {
+    room,
+    pantry: at(221, 'pantry'),
+    oven: at(221.65, 'oven'),
+    fridge: at(222.3, 'fridge'),
+    jar: s.addItem('kettle', 221, 0.36, 0, null, 0.118),
+    milk: s.addItem('kettle', 222.3, 0.36, 0, null, 0.118),
+  }
+})
+await p.evaluate((id) => window.__homescape.focusRoom(id), tc.room)
+await p.waitForTimeout(1200)
+await pick(tc.jar, 2)
+await pick(tc.milk, 2)
+const tcIn = { jar: await inside(tc.jar), milk: await inside(tc.milk) }
+const tcModel = await p.evaluate(async (tc) => {
+  const m = await import('/src/model/containers.ts')
+  const rules = await import('/src/model/rules.ts')
+  const s = window.__homescape.getState().layout
+  const lv = s.layout.levels.find((l) => l.id === s.levelId) ?? s.layout.levels[0]
+  const get = (id) => lv.items.find((i) => i.id === id)
+  return {
+    counts: [tc.pantry, tc.oven, tc.fridge].map((id) => m.interiorOf(get(id))?.length ?? 0),
+    ys: [get(tc.jar).y, get(tc.milk).y],
+    free: rules.checkItem(lv, { kind: 'tallCabinet', x: 222, z: 2, rot: 0.4, variant: 'fridge' }, undefined, false).ok,
+  }
+}, tc)
+ok(tcModel.counts.join() === '5,2,5', `The tall cabinet's compartments follow its type: pantry, oven column, fridge column (${tcModel.counts.join(', ')})`)
+ok(
+  tcIn.jar?.box === tc.pantry && tcIn.jar.label === 'Shelf 3' && Math.abs(tcModel.ys[0] - 0.929) < 0.01 && tcIn.milk?.box === tc.fridge && tcIn.milk.label === 'Fridge, shelf 2' && Math.abs(tcModel.ys[1] - 1.169) < 0.01,
+  `Things go on the pantry's third shelf and the fridge's second shelf (${tcIn.jar?.label} at ${tcModel.ys[0]} m, ${tcIn.milk?.label} at ${tcModel.ys[1]} m)`,
+)
+ok(tcModel.free, 'A tall cabinet can stand away from the walls, like a counter')
+await p.waitForTimeout(400)
+o = await opened()
+ok(o[tc.pantry] && o[tc.fridge] && !o[tc.oven], 'In edit mode the pantry and the fridge with things inside are open, the empty oven column is shut')
+await p.screenshot({ path: 'shots/interior-tall-cabinets.png' })
+await p.evaluate((room) => window.__homescape.getState().layout.deleteRoom(room), tc.room)
+
 await p.evaluate((room) => {
   window.__homescape.getState().layout.deleteRoom(room)
   window.__homescape.select(null)

@@ -17,7 +17,7 @@ import { usePlacement } from '@/model/placement'
 import { APPLIANCE_STACK, checkItem, FREE_SNAP, FREESTANDING, isWallMounted, snapsToWall, STACKABLE, surfaceAt, wallTop } from '@/model/rules'
 import { stairsWallRuns } from '@/model/stairs'
 import { counterSink } from '@/model/counter'
-import { carryPatches, containerOf, contentsOf, DRAWER_SLIDE, INTERIOR, OPENS, shelfAt, toLocal } from '@/model/containers'
+import { carryPatches, containerOf, contentsOf, DRAWER_SLIDE, interiorOf, OPENS, shelfAt, toLocal } from '@/model/containers'
 import type { Item } from '@/model/types'
 import { cameraApi, cameraKey, clickSlop, DRAG_PX, isTouchPointer, pointerKind } from './camera'
 import { DEFAULT_Y, KIT } from './kit/registry'
@@ -240,7 +240,7 @@ function ItemNodeImpl({ item, entity, related, night, levelId, still = false }: 
     usePlacement.getState().setMoving({ id: item.id, ok: chk.ok, reason: chk.reason })
     if (x !== item.x || z !== item.z || rot !== item.rot || ny !== item.y) {
       // Moving a cabinet carries its contents along (their local positions are kept)
-      if (INTERIOR[item.kind]) for (const c of carryPatches(level.items, cur, { x, z, rot })) useLayout.getState().updateItem(c.id, c.patch, false)
+      if (interiorOf(item)) for (const c of carryPatches(level.items, cur, { x, z, rot })) useLayout.getState().updateItem(c.id, c.patch, false)
       useLayout.getState().updateItem(item.id, { x, z, rot, y: ny }, false)
     }
   }

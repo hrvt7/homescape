@@ -13,7 +13,7 @@ import { usePlacement } from '@/model/placement'
 import { maxWidth, PANEL_DEFAULT, usePanel } from './panelState'
 import { checkItem, isWallMounted, MOUNTABLE, mountRange, overlapsRoom, SURFACE_Y, surfaceAt, wallTop } from '@/model/rules'
 import { stairsWallRuns } from '@/model/stairs'
-import { containerOf, INTERIOR, moveWithContents, placeInside, toLocal } from '@/model/containers'
+import { containerOf, interiorOf, moveWithContents, placeInside, toLocal } from '@/model/containers'
 import { counterSink, islandParts } from '@/model/counter'
 import { mountCenter, mountY, setMountY, setWallMount } from './mount'
 import type { FloorMaterial, Item, ItemKind, Room, RoomType } from '@/model/types'
@@ -1054,15 +1054,15 @@ function HeatingKind({ item }: { item: Item }) {
  */
 function Placement({ item }: { item: Item }) {
   const level = useLayout((s) => activeLevel(s))
-  if (!level || INTERIOR[item.kind] || isWallMounted(item.kind, item.variant, item.mount)) return null
+  if (!level || interiorOf(item) || isWallMounted(item.kind, item.variant, item.mount)) return null
   const box = level.items.find((c) => {
-    if (c.id === item.id || !INTERIOR[c.kind]) return false
+    if (c.id === item.id || !interiorOf(c)) return false
     const { lx, lz } = toLocal(c, item.x, item.z)
     const [w, d] = sizeOf(c.kind, c.len)
     return Math.abs(lx) < w / 2 && Math.abs(lz) < d / 2
   })
   if (!box) return null
-  const comps = INTERIOR[box.kind]!
+  const comps = interiorOf(box)!
   const cur = containerOf(level.items, item)
   const topY = SURFACE_Y[box.kind]
   const onTop = !cur && topY != null && Math.abs((item.y ?? 0) - topY - (box.y ?? 0)) < 0.03

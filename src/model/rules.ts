@@ -105,7 +105,7 @@ export const snapsToWall = (kind: ItemKind, mount?: Item['mount']) => Boolean(CA
  * FREE_SNAP of a wall they still stick to it, elsewhere they stand where they are dropped and turn with R. A counter away
  * from a wall has no wall cabinets (geometry.ts > backOnWall, Visual.free).
  */
-export const FREESTANDING: ItemKind[] = ['kitchenCounter', 'stove', 'sink', 'dishwasher', 'oven', 'fridge']
+export const FREESTANDING: ItemKind[] = ['kitchenCounter', 'stove', 'sink', 'dishwasher', 'oven', 'fridge', 'tallCabinet']
 export const FREE_SNAP = 0.35
 
 /** Current vertical range of a wall-mounted item, above the floor (m). */

@@ -136,6 +136,8 @@ function itemVoice(it: Item, main: HassEntity | undefined, rel: HassEntity[]): {
     case 'oven':
     case 'airFryer':
       return on ? { voice: 'ovenFan', gain: 0.6 } : null
+    case 'tallCabinet':
+      return on && it.variant === 'oven' ? { voice: 'ovenFan', gain: 0.6 } : null
     case 'diffuser':
       return on ? { voice: 'diffuser', gain: 0.8 } : null
     case 'boiler':

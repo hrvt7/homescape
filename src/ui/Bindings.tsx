@@ -50,6 +50,7 @@ const COMPANION: Partial<Record<ItemKind, string[]>> = {
   dryer: ['power', 'energy', 'switch', 'vibration'],
   dishwasher: ['power', 'energy', 'switch', 'moisture'],
   oven: ['power', 'energy', 'temperature', 'switch'],
+  tallCabinet: ['power', 'energy', 'temperature', 'switch'],
   wallFan: ['fan', 'switch', 'temperature'],
   deskFan: ['fan', 'switch', 'temperature'],
 }

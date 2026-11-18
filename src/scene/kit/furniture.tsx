@@ -903,6 +903,83 @@ export function Fridge() {
   )
 }
 
+/** Tall cabinet: plinth height and the plane of the doors (as on the wardrobes) */
+const TC_P = 0.1
+const TC_F = 0.309
+
+/**
+ * Tall kitchen cabinet (60 × 60 cm, 2.2 m high), a column next to the counters. Item.variant: a pantry (two doors over
+ * five shelves), an oven column (a built-in oven at waist height with a microwave above it, cabinets below and on top)
+ * or a fridge column (a built-in fridge behind its own door, a freezer below, a cabinet on top; lit inside while open).
+ * Cabinet color like the kitchen counter (v.opts.body). The doors open like the counter's (compartments in
+ * model/containers.ts > interiorOf); the oven glows while its switch or climate entity is on.
+ */
+export function TallCabinet({ v }: { v: Visual }) {
+  const body = v.opts.body ?? C.white
+  const door = v.opts.body ? v.opts.body : C.brandPale
+  const type = v.opts.variant === 'oven' || v.opts.variant === 'fridge' ? v.opts.variant : 'pantry'
+  const open = (...parts: number[]) => Math.max(...parts.map((i) => partOpen(v, i)))
+  const fridgeOpen = type === 'fridge' ? open(1, 2, 3) : 0
+  const glass = useLitMaterial('#1b2036', type === 'oven' && v.on, '#ff9a4a', 0.9, 1.6)
+  const liner = useLitMaterial('#e9eef5', fridgeOpen > 0.05, '#f4f9ff', 1, 0.9)
+  const plinth = <Box size={[0.6, TC_P, 0.52]} position={[0, TC_P / 2, -0.04]} color={shade(body, 0.8)} />
+  // Cabinet on top of the oven and fridge columns (1.82 to 2.2 m), compartment k
+  const topCabinet = (k: number) => (
+    <>
+      <Carcass w={0.6} h={0.38} d={0.6} y={1.82} color={body} />
+      <SwingDoor w={0.588} h={0.366} at={[0, 2.007, TC_F]} hinge="r" open={partOpen(v, k)} color={door} handle={0.14} />
+    </>
+  )
+  if (type === 'oven')
+    return (
+      <group>
+        {plinth}
+        <Carcass w={0.6} h={0.68} d={0.6} y={TC_P} color={body} />
+        <SwingDoor w={0.588} h={0.666} at={[0, TC_P + 0.34, TC_F]} hinge="r" open={partOpen(v, 0)} color={door} handle={0.14} />
+        {/* solid middle (0.78 to 1.82 m): the oven, its control strip and the microwave above it */}
+        <Box size={[0.6, 1.04, 0.6]} position={[0, 1.3, 0]} color={body} />
+        <Box size={[0.57, 0.58, 0.014]} position={[0, 1.09, TC_F]} color={C.ink} shadow={false} />
+        <Box size={[0.46, 0.3, 0.008]} position={[0, 1.05, TC_F + 0.009]} material={glass} shadow={false} />
+        <Box size={[0.4, 0.02, 0.03]} position={[0, 1.28, TC_F + 0.025]} color={C.steel} />
+        <Box size={[0.57, 0.07, 0.014]} position={[0, 1.42, TC_F]} color={C.steel} shadow={false} />
+        {[-0.18, -0.06, 0.06, 0.18].map((x) => (
+          <Cyl key={x} r={0.018} h={0.02} position={[x, 1.42, TC_F + 0.012]} rotation={[Math.PI / 2, 0, 0]} color={C.ink} segments={14} shadow={false} />
+        ))}
+        <Box size={[0.57, 0.3, 0.014]} position={[0, 1.63, TC_F]} color={C.ink} shadow={false} />
+        <Box size={[0.36, 0.2, 0.008]} position={[-0.08, 1.63, TC_F + 0.009]} color="#2a3550" shadow={false} />
+        <Box size={[0.1, 0.03, 0.008]} position={[0.2, 1.71, TC_F + 0.009]} color="#3a4a6a" shadow={false} />
+        {[1.65, 1.61, 1.57].map((y) => (
+          <Box key={y} size={[0.08, 0.014, 0.006]} position={[0.2, y, TC_F + 0.009]} color={C.steel} shadow={false} />
+        ))}
+        {v.on && <Glow position={[0, 1.05, TC_F + 0.15]} color="#ff9a4a" opacity={v.night ? 0.6 : 0.3} size={0.8} />}
+        {topCabinet(1)}
+      </group>
+    )
+  if (type === 'fridge')
+    return (
+      <group>
+        {plinth}
+        {/* freezer (0.1 to 0.82 m) and fridge (0.83 to 1.81 m), each behind its own door, with a light inner lining */}
+        <Carcass w={0.6} h={0.72} d={0.6} y={TC_P} color={body} />
+        <Box size={[0.55, 0.68, 0.01]} position={[0, TC_P + 0.36, -0.28]} color="#e9eef5" shadow={false} />
+        <SwingDoor w={0.588} h={0.706} at={[0, TC_P + 0.36, TC_F]} hinge="r" open={partOpen(v, 0)} color={door} handle={0.2} />
+        <Carcass w={0.6} h={0.98} d={0.6} y={0.83} color={body} shelves={[0.33, 0.66]} />
+        <Box size={[0.55, 0.94, 0.01]} position={[0, 1.32, -0.28]} material={liner} shadow={false} />
+        <SwingDoor w={0.588} h={0.966} at={[0, 1.32, TC_F]} hinge="r" open={fridgeOpen} color={door} handle={0.3} />
+        {fridgeOpen > 0.05 && <Glow position={[0, 1.45, 0.15]} color="#eef6ff" opacity={v.night ? 0.6 : 0.3} size={0.7} />}
+        {topCabinet(4)}
+      </group>
+    )
+  return (
+    <group>
+      {plinth}
+      <Carcass w={0.6} h={2.1} d={0.6} y={TC_P} color={body} shelves={[0.42, 0.82, 1.24, 1.64]} />
+      <SwingDoor w={0.588} h={1.226} at={[0, TC_P + 0.617, TC_F]} hinge="r" open={open(0, 1, 2)} color={door} handle={0.3} />
+      <SwingDoor w={0.588} h={0.846} at={[0, 1.768, TC_F]} hinge="r" open={open(3, 4)} color={door} handle={0.2} />
+    </group>
+  )
+}
+
 export function Stove() {
   return (
     <group>

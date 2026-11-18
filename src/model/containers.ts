@@ -69,8 +69,44 @@ export const INTERIOR: Partial<Record<ItemKind, Compartment[]>> = {
   ],
 }
 
+const side = { z0: -0.27, z1: 0.27 }
+const fridge = { z0: -0.27, z1: 0.25 }
+/**
+ * Compartments that depend on the item's type (Item.variant; the first one when not set): the tall kitchen cabinet is a
+ * pantry, an oven column or a fridge column (kit/furniture.tsx > TallCabinet).
+ */
+const INTERIOR_BY_VARIANT: Partial<Record<ItemKind, Record<string, Compartment[]>>> = {
+  tallCabinet: {
+    pantry: [
+      { label: t('Shelf {n}', { n: 1 }), y: 0.118, h: 0.39, ...side },
+      { label: t('Shelf {n}', { n: 2 }), y: 0.529, h: 0.38, ...side },
+      { label: t('Shelf {n}', { n: 3 }), y: 0.929, h: 0.4, ...side },
+      { label: t('Shelf {n}', { n: 4 }), y: 1.349, h: 0.38, ...side },
+      { label: t('Shelf {n}', { n: 5 }), y: 1.749, h: 0.43, ...side },
+    ],
+    oven: [
+      { label: t('Bottom compartment'), y: 0.118, h: 0.64, ...side },
+      { label: t('Top compartment'), y: 1.838, h: 0.34, ...side },
+    ],
+    fridge: [
+      { label: t('Freezer'), y: 0.118, h: 0.68, ...fridge },
+      { label: t('Fridge, shelf {n}', { n: 1 }), y: 0.848, h: 0.3, ...fridge },
+      { label: t('Fridge, shelf {n}', { n: 2 }), y: 1.169, h: 0.31, ...fridge },
+      { label: t('Fridge, shelf {n}', { n: 3 }), y: 1.499, h: 0.29, ...fridge },
+      { label: t('Top compartment'), y: 1.838, h: 0.34, ...side },
+    ],
+  },
+}
+
+/** Compartments of furniture that holds items (by its type where that matters); undefined for anything else */
+export function interiorOf(it: Pick<Item, 'kind' | 'variant'>): Compartment[] | undefined {
+  const byVariant = INTERIOR_BY_VARIANT[it.kind]
+  if (byVariant) return byVariant[it.variant ?? ''] ?? Object.values(byVariant)[0]
+  return INTERIOR[it.kind]
+}
+
 /** Furniture with doors or drawers (that opens): the bookshelf has open shelves and does not open. */
-export const OPENS = (kind: ItemKind) => Boolean(INTERIOR[kind]) && kind !== 'bookshelf'
+export const OPENS = (kind: ItemKind) => Boolean(INTERIOR[kind] || INTERIOR_BY_VARIANT[kind]) && kind !== 'bookshelf'
 
 /** Cabinet width (local x; Item.len for adjustable lengths) */
 const widthOf = (c: Item) => sizeOf(c.kind, c.len)[0]
@@ -114,10 +150,10 @@ export function containerOf(items: Item[], it: Item): Hit {
 }
 
 function findContainer(items: Item[], it: Item): Hit {
-  if (INTERIOR[it.kind] && it.y == null) return null
+  if (interiorOf(it) && it.y == null) return null
   for (const c of items) {
     if (c.id === it.id) continue
-    const comps = INTERIOR[c.kind]
+    const comps = interiorOf(c)
     if (!comps) continue
     const { lx, lz } = toLocal(c, it.x, it.z)
     if (Math.abs(lx) > widthOf(c) / 2 - 0.02) continue
@@ -147,7 +183,7 @@ export function contentsOf(items: Item[], box: Item): Item[] {
  * (cabinet and items before the move; the cabinet's next position).
  */
 export function carryPatches(items: Item[], box: Item, next: Pick<Item, 'x' | 'z' | 'rot'>): { id: string; patch: Partial<Item> }[] {
-  if (!INTERIOR[box.kind]) return []
+  if (!interiorOf(box)) return []
   return contentsOf(items, box).map((it) => {
     const { lx, lz } = toLocal(box, it.x, it.z)
     const p = toWorld(next, lx, lz)
@@ -171,7 +207,7 @@ export function shelfAt(items: Item[], x: number, z: number, kind: ItemKind, ign
   const [, d] = sizeOf(kind)
   for (const c of items) {
     if (c.id === ignoreId || SURFACE_Y[c.kind] != null) continue
-    const comps = INTERIOR[c.kind]
+    const comps = interiorOf(c)
     if (!comps) continue
     const { lx, lz } = toLocal(c, x, z)
     const [w, cd] = sizeOf(c.kind, c.len)
@@ -188,7 +224,7 @@ export function shelfAt(items: Item[], x: number, z: number, kind: ItemKind, ign
  * fit, the reason.
  */
 export function placeInside(box: Item, index: number, it: Item): { patch: Partial<Item> } | { reason: string } {
-  const comp = INTERIOR[box.kind]?.[index]
+  const comp = interiorOf(box)?.[index]
   if (!comp) return { reason: t('This cabinet has no such compartment') }
   const [w, d] = sizeOf(it.kind, it.len, it.len2)
   const hw = widthOf(box) / 2 - 0.03

@@ -203,6 +203,7 @@ function groundFloor(): Level {
   wall(kitchen, 'left', 0.425, 'fridge')
   wall(kitchen, 'left', 1.45, 'stove')
   wall(kitchen, 'left', 2.3, 'oven', { variant: 'tall' })
+  wall(kitchen, 'left', 2.9, 'tallCabinet', { variant: 'pantry', body: '#3a3f5c' })
   wall(kitchen, 'back', 0.5, 'kitchenCounter', { ...bind('light.us_kitchen_counter_led'), len: 2.4, sink: 'center', led: 'under', top: '#ecdcc4', body: '#3a3f5c' })
   wall(kitchen, 'back', 2, 'dishwasher', bind('switch.us_dishwasher', 'sensor.us_dishwasher_power'))
   // The leg of the L counter reaches into the room: island / bar

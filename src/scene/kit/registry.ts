@@ -79,6 +79,7 @@ export const KIT: Record<ItemKind, ComponentType<{ v: Visual }>> = {
   dryer: A.Dryer,
   dishwasher: A.Dishwasher,
   oven: A.Oven,
+  tallCabinet: F.TallCabinet,
   waterDispenser: A.WaterDispenser,
   wallFan: D.WallFan,
   deskFan: D.DeskFan,

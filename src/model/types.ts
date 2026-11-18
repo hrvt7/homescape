@@ -215,6 +215,7 @@ export type ItemKind =
   | 'dryer'
   | 'dishwasher'
   | 'oven'
+  | 'tallCabinet'
   | 'waterDispenser'
   // small devices
   | 'wallFan'
