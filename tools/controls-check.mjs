@@ -380,6 +380,35 @@ if (spot) {
   }
 }
 
+// --- Sofa card: the Seats option makes an L-shaped sectional with an arm length slider, undo brings it back (#10) ---
+{
+  const ids = await H(() => {
+    const h = window.__homescape
+    const s = h.getState().layout
+    const room = s.addRoom({ name: 'Sectional test', floor: 'wood', x: 40, z: 40, w: 7, d: 6 })
+    const id = s.addItem('sofa', 43.5, 40.6, 0)
+    h.setMode('edit')
+    h.select({ type: 'item', id })
+    return { room, id }
+  })
+  await p.waitForTimeout(500)
+  const item = () => H((id) => window.__homescape.getState().layout.layout.levels[0].items.find((i) => i.id === id), ids.id)
+  await p.click('aside button:has-text("L (right corner)")')
+  await p.waitForTimeout(400)
+  const s1 = await item()
+  const slider = await p.isVisible('aside >> text=L arm length (from the corner)')
+  ok(s1?.variant === 'lRight' && s1.len === 2.6 && slider, `The sofa card makes it an L-shaped sectional with an arm length slider (${s1?.variant}, ${s1?.len} m)`)
+  await p.keyboard.press('Meta+z')
+  await p.waitForTimeout(300)
+  ok(!(await item())?.variant, 'Undo brings back the straight sofa')
+  await H((room) => {
+    const h = window.__homescape
+    h.select(null)
+    h.getState().layout.deleteRoom(room)
+  }, ids.room)
+  await p.waitForTimeout(300)
+}
+
 // --- Build bar search: a type or style option is found by its own name, with its preset card (GitHub issue #10) ---
 {
   await H(() => window.__homescape.setMode('edit'))

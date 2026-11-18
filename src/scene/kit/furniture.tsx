@@ -7,6 +7,7 @@ import { HEADBOARD } from '@/model/bindings'
 import { CATALOG, RUG_DEFAULT } from '@/model/catalog'
 import { DRAWER_SLIDE } from '@/model/containers'
 import { islandParts, SINK_W, SLOT_W } from '@/model/counter'
+import { isSectional, sectionalArm, SOFA_D, sofaSeats } from '@/model/sofa'
 import { markShadows } from '../frame'
 import { Glow, StripGlow, useEased, useLitMaterial, Wash } from './effects'
 import { BOOK_COLORS, C } from './palette'
@@ -156,6 +157,7 @@ const legs4 = (w: number, d: number, h: number, color: string = C.ink, r = 0.03)
  */
 export function Sofa({ v }: { v: Visual }) {
   const W = v.opts.len ?? CATALOG.sofa.size[0]
+  if (isSectional(v.opts.variant)) return <Sectional W={W} variant={v.opts.variant!} len2={v.opts.len2} />
   const n = W >= 2 ? 3 : 2
   const step = (W - 0.43) / n
   // Seat top at 0.49 m (a real sofa): a seated person's feet reach the floor; the back cushions keep them forward
@@ -174,6 +176,49 @@ export function Sofa({ v }: { v: Visual }) {
         </group>
       ))}
       <Box size={[0.28, 0.26, 0.1]} position={[W / 2 - 0.35, 0.62, 0]} rotation={[-0.15, -0.65, 0.08]} color={C.sun} radius={0.045} />
+    </group>
+  )
+}
+
+/**
+ * L-shaped sectional sofa (Item.variant 'lLeft' | 'lRight'): the main run with an arm at the far end and a back that turns
+ * the corner, and a second run coming forward from the corner with an arm at its end (model/sofa.ts; its cushions are the
+ * seats people and pets use).
+ */
+function Sectional({ W, variant, len2 }: { W: number; variant: string; len2?: number }) {
+  const sx = variant === 'lRight' ? 1 : -1
+  const D = SOFA_D
+  const leg = sectionalArm(len2)
+  const runL = leg - D
+  const sideX = sx * (W / 2 - D / 2)
+  const sideZ = D / 2 + runL / 2
+  const seats = sofaSeats(W, variant, len2)
+  return (
+    <group>
+      {legs4(W - 0.1, 0.8, 0.08)}
+      <Cyl r={0.03} h={0.08} position={[sx * (W / 2 - 0.06), 0.04, -D / 2 + leg - 0.06]} color={C.ink} />
+      <Cyl r={0.03} h={0.08} position={[sx * (W / 2 - D + 0.06), 0.04, -D / 2 + leg - 0.06]} color={C.ink} />
+      {/* main run: base, back, far arm and the back on the corner's outer side */}
+      <Box size={[W, 0.28, D]} position={[0, 0.22, 0]} color={C.brand} radius={0.08} />
+      <Box size={[W, 0.62, 0.24]} position={[0, 0.62, -0.33]} color={C.brand} radius={0.08} />
+      <Box size={[0.22, 0.5, D]} position={[-sx * (W / 2 - 0.1), 0.39, 0]} color={C.brand} radius={0.08} />
+      <Box size={[0.24, 0.62, D]} position={[sx * (W / 2 - 0.12), 0.62, 0]} color={C.brand} radius={0.08} />
+      {/* second run: base, outer back and the arm at its end */}
+      <Box size={[D, 0.28, runL]} position={[sideX, 0.22, sideZ]} color={C.brand} radius={0.08} />
+      <Box size={[0.24, 0.62, runL]} position={[sx * (W / 2 - 0.12), 0.62, sideZ]} color={C.brand} radius={0.08} />
+      <Box size={[D, 0.5, 0.22]} position={[sideX, 0.39, -D / 2 + leg - 0.11]} color={C.brand} radius={0.08} />
+      {seats.map((s) => {
+        const side = s.rot !== 0
+        // The back cushion leans against the back of its run: the main run's back (-z) or the outer side (sx)
+        const back: [number, number, number] = side ? [sx * (W / 2 - 0.32), 0.68, s.z] : [s.x, 0.68, -0.14]
+        return (
+          <group key={`${s.x.toFixed(3)}${s.z.toFixed(3)}`}>
+            <Box size={side ? [0.66, 0.14, s.w - 0.015] : [s.w - 0.015, 0.14, 0.66]} position={[s.x, 0.42, s.z]} color={C.brandLight} radius={0.06} />
+            <Box size={side ? [0.16, 0.4, s.w - 0.015] : [s.w - 0.015, 0.4, 0.16]} position={back} rotation={side ? [0, 0, sx * 0.12] : [-0.12, 0, 0]} color={C.brandLight} radius={0.07} />
+          </group>
+        )
+      })}
+      <Box size={[0.28, 0.26, 0.1]} position={[-sx * (W / 2 - 0.35), 0.62, 0]} rotation={[-0.15, sx * 0.65, -0.08 * sx]} color={C.sun} radius={0.045} />
     </group>
   )
 }

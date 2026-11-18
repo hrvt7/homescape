@@ -1,6 +1,7 @@
 import { t } from '@/i18n'
 import { CATALOG, doorWidth, TREE_DEF_H, isSlidingDoor, isWallOpening, SLIDING_DOOR, sizeOf, WINDOW_BOTTOM, windowSize } from './catalog'
 import { inRoom, isAperture, isOutdoor, rectsOf, roomAt, WALL_H, WALL_IN } from './geometry'
+import { sectionalArm } from './sofa'
 import type { Item, ItemKind, Level, Rect, Room } from './types'
 
 /*
@@ -237,10 +238,11 @@ export interface LocalRect {
 export function localFootprints(s: Omit<Shape, 'x' | 'z' | 'rot'>): LocalRect[] {
   const [w, d] = sizeOf(s.kind, s.len, s.len2)
   const main = { cx: 0, cz: 0, w, d }
-  if (s.kind !== 'kitchenCounter' || (s.variant !== 'lLeft' && s.variant !== 'lRight')) return [main]
-  const L = s.len ?? CATALOG.kitchenCounter.size[0]
-  const D = CATALOG.kitchenCounter.size[1]
-  const leg = Math.max(D + 0.2, s.len2 ?? 1.8)
+  // L shapes: a kitchen counter or a sectional sofa (model/sofa.ts) with its second run forward from the corner
+  if ((s.kind !== 'kitchenCounter' && s.kind !== 'sofa') || (s.variant !== 'lLeft' && s.variant !== 'lRight')) return [main]
+  const L = s.len ?? CATALOG[s.kind].size[0]
+  const D = CATALOG[s.kind].size[1]
+  const leg = s.kind === 'sofa' ? sectionalArm(s.len2) : Math.max(D + 0.2, s.len2 ?? 1.8)
   const sx = s.variant === 'lRight' ? 1 : -1
   return [main, { cx: sx * (L / 2 - D / 2), cz: D / 2 + (leg - D) / 2, w: D, d: leg - D }]
 }

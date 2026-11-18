@@ -3,6 +3,7 @@ import { t } from '@/i18n'
 import { sizeOf } from './catalog'
 import { bounds, isOutdoor, rectsOf, runOpenings, WALL_IN, wallRuns } from './geometry'
 import { footprints, layerOf } from './rules'
+import { isSectional, sofaSeats } from './sofa'
 import type { Item, ItemKind, Level, Rect, Room } from './types'
 
 /*
@@ -485,6 +486,16 @@ export function petPlaces(level: Level, species: Species): PetPlace[] {
         if (!cat) add(it, 'house', 0, 0.05, 0.05, it.rot, 'lie')
         break
       case 'sofa': {
+        if (isSectional(it.variant)) {
+          // Sectional (model/sofa.ts): a nap on every cushion of both runs; cats perch on the back and on the far arm
+          const sx = it.variant === 'lRight' ? 1 : -1
+          for (const c of sofaSeats(w, it.variant, it.len2)) add(it, 'nap', c.x, c.z + (c.rot ? 0 : 0.01), 0.49, it.rot + c.rot + (cat ? 0 : Math.PI / 2), cat ? 'curl' : 'lie')
+          if (cat) {
+            add(it, 'perch', -sx * w * 0.2, -0.33, 0.93, it.rot + Math.PI / 2, 'lie')
+            add(it, 'perch', -sx * (w / 2 - 0.11), 0.05, 0.64, it.rot, 'sit')
+          }
+          break
+        }
         const seats = w >= 2 ? [-0.6, 0, 0.6] : [-0.3, 0.3]
         for (const x of seats) add(it, 'nap', x, 0.12, 0.49, it.rot + (cat ? 0 : Math.PI / 2), cat ? 'curl' : 'lie')
         if (cat) {

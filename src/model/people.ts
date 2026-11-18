@@ -5,6 +5,7 @@ import { CATALOG, sizeOf } from './catalog'
 import { counterSink } from './counter'
 import { APERTURE_INSET, besideDoor, doorSides, exteriorSide, frontDoor, inRoom, isOutdoor, rectsOf, roomAt } from './geometry'
 import { buildPetGrid, findPath, gridRoom, isFree, nearestFree, type PetGrid } from './pets'
+import { isSectional, sofaSeats } from './sofa'
 import type { Item, ItemKind, Level, Room } from './types'
 
 /*
@@ -193,11 +194,18 @@ const SEAT = {
 }
 
 /** Seats: sofa (2-3), armchair, chair, gaming chair, office chair. The person faces the item's local +z. */
-function seats(level: Level, room: Room): Spot[] {
+export function seats(level: Level, room: Room): Spot[] {
   const out: Spot[] = []
   for (const it of itemsIn(level, room)) {
     const base = (it.y ?? 0) + 0
-    if (it.kind === 'sofa') {
+    if (it.kind === 'sofa' && isSectional(it.variant)) {
+      // Sectional: every cushion of both runs (model/sofa.ts), facing the front of its run, 4 cm in front of its middle
+      for (const c of sofaSeats(it.len ?? CATALOG.sofa.size[0], it.variant, it.len2)) {
+        const fx = Math.sin(c.rot) * 0.04
+        const fz = Math.cos(c.rot) * 0.04
+        out.push({ ...local(it, c.x + fx, c.z + fz), y: base + 0.48, lean: 0.12, rot: it.rot + c.rot, pose: 'sit', roomId: room.id, use: 'sofa' })
+      }
+    } else if (it.kind === 'sofa') {
       // Cushion top 0.49 m, the middle of the cushions (0.595 apart); the person sits on the cushion, leaning back slightly
       const n = (it.len ?? CATALOG.sofa.size[0]) >= 2 ? 3 : 2
       for (let k = 0; k < n; k++) out.push({ ...local(it, (k - (n - 1) / 2) * 0.595, 0.15), y: base + 0.48, lean: 0.12, rot: it.rot, pose: 'sit', roomId: room.id, use: 'sofa' })

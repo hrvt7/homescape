@@ -571,15 +571,18 @@ export const OPTIONS: Partial<
     body: t('Curtain color'),
     note: t('Bind the curtain motor (Home Assistant cover) to this window: its open percentage (current_position) opens and closes the curtain; the slat angle of a venetian blind and the stripe alignment of a zebra blind follow current_tilt_position. With a window sensor bound, the sash opens.'),
   },
-  // Three seats or a two-seat loveseat: the width (Item.len) changes with it; people.ts and pets.ts count the seats from it
+  // Three seats, a two-seat loveseat or an L-shaped sectional (corner left or right, model/sofa.ts): the width (Item.len)
+  // changes with it; people.ts and pets.ts take the seats from model/sofa.ts > sofaSeats
   sofa: {
     variantLabel: t('Seats'),
     variants: [
       ['3', t('3 seats')],
       ['2', t('2 seats')],
+      ['lLeft', t('L (left corner)')],
+      ['lRight', t('L (right corner)')],
     ],
     variantDef: '3',
-    variantLen: { 3: 2.2, 2: 1.6 },
+    variantLen: { 3: 2.2, 2: 1.6, lLeft: 2.6, lRight: 2.6 },
   },
   bed: {
     // Single, double or king size: the width (Item.len); from 1.3 m two people sleep in it (people.ts)
@@ -1097,6 +1100,7 @@ export const doorWidth = (it: { kind: ItemKind; variant?: string; len?: number }
 /** Second size (Item.len2): the arm of an L counter (L shapes only), the height of a window */
 export const RESIZABLE2: Partial<Record<ItemKind, { min: number; max: number; label: string; def: number; onlyL?: boolean }>> = {
   kitchenCounter: { min: 1.2, max: 4, label: t('L arm length (from the corner)'), def: 1.8, onlyL: true },
+  sofa: { min: 1.5, max: 3.2, label: t('L arm length (from the corner)'), def: 2, onlyL: true },
   window: { min: 0.5, max: 2.3, label: t('Window height'), def: 1.2 },
   rug: { min: 0.5, max: 5, label: t('Rug length'), def: 1.8 },
   doormat: { min: 0.3, max: 1.5, label: t('Doormat length'), def: 0.45 },
@@ -1140,6 +1144,7 @@ export const ITEM_PRESETS: ItemPreset[] = [
   { id: 'loveseat', kind: 'sofa', label: t('Loveseat'), sub: t('2 seats'), extra: { variant: '2', len: 1.6 } },
   // A big tree planted in the garden or on a terrace; the height slider in its card goes from 0.6 to 5 m
   { id: 'christmasTreeOutdoor', kind: 'christmasTree', label: t('Outdoor Christmas tree'), sub: t('{h} m · planted', { h: formatNumber(3.5) }), extra: { variant: 'ground', len: 3.5 } },
+  { id: 'sectional', kind: 'sofa', label: t('Sectional sofa'), sub: t('L-shaped'), extra: { variant: 'lRight', len: 2.6, len2: 2 } },
   // Types that people look for by their own name (the search finds them too)
   { id: 'ottoman', kind: 'pouf', label: t('Ottoman'), sub: t('footrest'), extra: { variant: 'ottoman' } },
   { id: 'riceCooker', kind: 'multicooker', label: t('Rice cooker'), sub: t('goes on a counter'), extra: { variant: 'rice' } },

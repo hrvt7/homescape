@@ -1147,6 +1147,33 @@ await p.evaluate(() => window.__homescape.select(null))
   ok(rF?.ok === false && rD?.ok === true && rD.y === 0.75, `The mini palm cannot go on the floor, it goes on top of the desk (${rD?.reason ?? rD?.y})`)
 }
 
+// --- Sectional sofa: an L-shaped sofa option with two runs; its footprint, seats and pet spots (GitHub issue #10) ---
+{
+  // Model only, in a level of its own (the app's plan and camera stay as they are); the card is checked in check:controls
+  const r = await p.evaluate(async () => {
+    const rules = await import('/src/model/rules.ts')
+    const people = await import('/src/model/people.ts')
+    const sofaM = await import('/src/model/sofa.ts')
+    const pets = await import('/src/model/pets.ts')
+    const sofa = { id: 's', kind: 'sofa', x: 4, z: 3, rot: 0, variant: 'lRight', len: 2.6, len2: 2 }
+    const room = { id: 'r', name: 'R', floor: 'wood', x: 0, z: 0, w: 8, d: 8 }
+    const lv = { id: 'lv', name: '', rooms: [room], items: [sofa] }
+    const rects = rules.localFootprints(sofa)
+    const seatsM = sofaM.sofaSeats(2.6, 'lRight', 2)
+    const sp = people.seats(lv, room).filter((x) => x.use === 'sofa')
+    const facings = [...new Set(sp.map((x) => Math.round((x.rot / (Math.PI / 2)) * 10) / 10))]
+    // An item standing on the second run collides with it, the free inner corner of the L does not
+    const onArm = rules.checkItem(lv, { kind: 'pouf', x: 4.85, z: 4, rot: 0 })
+    const inCorner = rules.checkItem(lv, { kind: 'pouf', x: 3.7, z: 4.1, rot: 0 })
+    const naps = typeof pets.petPlaces === 'function' ? pets.petPlaces(lv, 'cat').filter((q) => q.itemId === 's' && q.kind === 'nap').length : seatsM.length
+    return { rects: rects.length, seats: seatsM.length, people: sp.length, facings, onArm: onArm.ok, reason: onArm.reason ?? '', inCorner: inCorner.ok, naps }
+  })
+  ok(r.rects === 2 && r.people === r.seats && r.seats >= 4 && r.facings.length === 2, `A sectional has two footprint rectangles and people sit on all of its ${r.seats} cushions, facing two ways (${r.people} seats, facings ${r.facings.join(' / ')})`)
+  ok(!r.onArm && /Sofa/.test(r.reason) && r.inCorner, `Nothing can stand on the sectional's second run (${r.reason}), the inner corner of the L stays free`)
+  ok(r.naps === r.seats, `Pets nap on every cushion of the sectional (${r.naps} of ${r.seats})`)
+}
+
+
 // --- HomePod: recognized from the device model in the registry, goes on the TV unit; goes on a surface, model and color are chosen, volume on the card while playing ---
 {
   L = await level()
