@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0
+
+- **Kitchen island** ([#9](https://github.com/muratozturkdev/homescape/pull/9)): 1.2 to 3.6 m long, with a seating
+  overhang for bar stools and an optional built-in sink and dishwasher.
+- **L-shaped sectional sofa** ([#10](https://github.com/muratozturkdev/homescape/issues/10)), left or right corner,
+  with an adjustable second arm.
+- **U-shaped stairs** ([#10](https://github.com/muratozturkdev/homescape/issues/10)) with a half landing, and walls
+  along the stairs that furniture and wall items can use.
+- **Tall kitchen cabinet** ([#10](https://github.com/muratozturkdev/homescape/issues/10)): pantry, oven and microwave,
+  or fridge column.
+- **Blender** ([#10](https://github.com/muratozturkdev/homescape/issues/10)): the contents spin while it is on.
+- **Garage door width** ([#10](https://github.com/muratozturkdev/homescape/issues/10)): 2.2 to 5.5 m, with a Double
+  garage door card.
+- **Christmas tree** ([#8](https://github.com/muratozturkdev/homescape/pull/8)): a height from 0.6 to 5 m, in a pot or
+  planted outdoors.
+- The item search finds types and English names too (Ottoman, Rice cooker).
+- The room bar scrolls with a mouse wheel.
+
 ## 0.3.1
 
 - **Wall openings**: a passage with no door, 0.6 to 4 m wide, at door height or up to the ceiling. Put one or more in a
