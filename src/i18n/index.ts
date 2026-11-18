@@ -124,6 +124,24 @@ export async function inLanguage<T>(code: Lang, fn: () => T): Promise<T | null> 
 /** Current language code (also a valid BCP 47 locale for Intl and toLocaleString) */
 export const currentLang = () => lang
 
+let reverse: { of: Record<string, Entry>; map: Map<string, string> } | null = null
+/**
+ * The English text a translated text came from (the item search matches English names too, in any language). The text
+ * itself when it is English or not a translation.
+ */
+export function english(text: string): string {
+  if (lang === 'en') return text
+  if (reverse?.of !== dict) {
+    const map = new Map<string, string>()
+    for (const [k, v] of Object.entries(dict)) {
+      const s = typeof v === 'string' ? v : v.other
+      if (s && !map.has(s)) map.set(s, k.includes('|') ? k.slice(k.indexOf('|') + 1) : k)
+    }
+    reverse = { of: dict, map }
+  }
+  return reverse.map.get(text) ?? text
+}
+
 /** Saves the language choice (null: automatic) and reloads the page */
 export function setLang(code: Lang | null) {
   try {

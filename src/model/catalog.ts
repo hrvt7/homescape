@@ -928,6 +928,7 @@ export const OPTIONS: Partial<
   ironingBoard: { body: t('Cover color'), bodyList: BODY_COLORS, bodyDef: '#8fd8bd' },
   barStool: { body: t('Color'), bodyList: BODY_COLORS, bodyDef: '#1f2440' },
   crib: { body: t('Color'), bodyList: BODY_COLORS, bodyDef: '#ffffff' },
+  multicooker: { variantLabel: t('Type'), variants: [['multicooker', t('Multicooker')], ['rice', t('Rice cooker')]], variantDef: 'multicooker' },
   pouf: { variantLabel: t('Type'), variants: [['pouf', t('Pouf')], ['beanbag', t('Bean bag')], ['ottoman', t('Ottoman')]], variantDef: 'pouf', body: t('Color'), bodyList: BODY_COLORS, bodyDef: '#8fd8bd' },
   yogaMat: { variantLabel: t('Type'), variants: [['flat', t('Rolled out')], ['rolled', t('Rolled up')]], variantDef: 'flat', body: t('Color'), bodyList: ACCENT_COLORS, bodyDef: '#8f6cf0' },
   piano: { variantLabel: t('Type'), variants: [['upright', t('Upright')], ['digital', t('Digital')]], variantDef: 'upright' },
@@ -1139,6 +1140,9 @@ export const ITEM_PRESETS: ItemPreset[] = [
   { id: 'loveseat', kind: 'sofa', label: t('Loveseat'), sub: t('2 seats'), extra: { variant: '2', len: 1.6 } },
   // A big tree planted in the garden or on a terrace; the height slider in its card goes from 0.6 to 5 m
   { id: 'christmasTreeOutdoor', kind: 'christmasTree', label: t('Outdoor Christmas tree'), sub: t('{h} m · planted', { h: formatNumber(3.5) }), extra: { variant: 'ground', len: 3.5 } },
+  // Types that people look for by their own name (the search finds them too)
+  { id: 'ottoman', kind: 'pouf', label: t('Ottoman'), sub: t('footrest'), extra: { variant: 'ottoman' } },
+  { id: 'riceCooker', kind: 'multicooker', label: t('Rice cooker'), sub: t('goes on a counter'), extra: { variant: 'rice' } },
 ]
 
 /** Window size: width (Item.len), height (Item.len2), bottom edge 0.9 m above the floor (moves with Item.y). */

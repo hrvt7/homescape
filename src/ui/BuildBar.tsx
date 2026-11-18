@@ -1,12 +1,12 @@
 import { Bath, Car, DoorOpen, Keyboard, Lightbulb, PawPrint, Plug, Radar, Search, ShieldCheck, Sofa, SquareDashed, SquarePlus, Thermometer, Trees, Tv, WashingMachine, X } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
-import { CATALOG, GROUP_LABEL, ITEM_PRESETS, KINDS_BY_GROUP, type KindGroup } from '@/model/catalog'
+import { CATALOG, GROUP_LABEL, ITEM_PRESETS, KINDS_BY_GROUP, OPTIONS, type KindGroup } from '@/model/catalog'
 import { activeLevel, useLayout } from '@/model/layoutStore'
 import { rectBounds } from '@/model/geometry'
 import { presetRects, ROOM_PRESETS, usePlacement } from '@/model/placement'
 import { DESK_ONLY, STACKABLE } from '@/model/rules'
 import type { ItemKind } from '@/model/types'
-import { formatNumber, lower, t } from '@/i18n'
+import { english, formatNumber, lower, t } from '@/i18n'
 import { KIND_ICON } from './kindIcons'
 import { useThumbs } from './thumbStore'
 import { beginCardDrag } from './usePlacementInput'
@@ -72,6 +72,16 @@ const DOMAIN_LABEL: Record<string, string> = {
   weather: t('weather'),
 }
 
+/** Texts to search in: each in the current language and in English (a German user typing "sofa" still finds it) */
+const searchText = (texts: string[]) => texts.flatMap((s) => [s, english(s)]).join(' ')
+
+/** Everything a kind can be found by: name, group, bindable device types and its type or style options */
+const kindText = (kind: ItemKind) => {
+  const m = CATALOG[kind]
+  const o = OPTIONS[kind]
+  return searchText([m.label, GROUP_LABEL[m.group], ...m.domains.map((d) => DOMAIN_LABEL[d] ?? d), ...(o?.variants ?? []).map(([, label]) => label)])
+}
+
 function caption(kind: ItemKind) {
   const m = CATALOG[kind]
   if (DESK_ONLY.includes(kind)) return t('goes on a desk')
@@ -126,15 +136,16 @@ export default function BuildBar() {
   const target = usePlacement((s) => s.target)
   const setTool = useLayout((s) => s.setTool)
   const tool = useLayout((s) => s.tool)
-  // Item search across all tabs: by name, group or a device type that can be bound
+  // Item search across all tabs: by name, group, a device type that can be bound, a type or style option ("ottoman" finds
+  // the pouf) and the preset cards, in the current language and in English (searchText)
   const [query, setQuery] = useState('')
   const q = fold(query.trim())
   const hits = (text: string) => fold(text).includes(q)
   const found = q
     ? {
-        rooms: ROOM_PRESETS.filter((p) => hits(p.label)),
-        kinds: (Object.keys(CATALOG) as ItemKind[]).filter((k) => hits(`${CATALOG[k].label} ${GROUP_LABEL[CATALOG[k].group]} ${CATALOG[k].domains.map((d) => DOMAIN_LABEL[d] ?? d).join(' ')}`)),
-        presets: ITEM_PRESETS.filter((pr) => hits(`${pr.label} ${CATALOG[pr.kind].label}`)),
+        rooms: ROOM_PRESETS.filter((p) => hits(searchText([p.label]))),
+        kinds: (Object.keys(CATALOG) as ItemKind[]).filter((k) => hits(kindText(k))),
+        presets: ITEM_PRESETS.filter((pr) => hits(searchText([pr.label, pr.sub, CATALOG[pr.kind].label]))),
       }
     : null
 

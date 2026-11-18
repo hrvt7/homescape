@@ -779,6 +779,22 @@ export function Toaster({ v }: P) {
 export function Multicooker({ v }: P) {
   const body = bodyOf(v, '#f2f2f4')
   const disp = useLitMaterial(C.screenOff, v.on, '#ffb35a', 0.9, 1.6)
+  // Rice cooker type (Item.variant 'rice'): a rounder body under a domed lid with a carry handle, steam from the vent
+  if (v.opts.variant === 'rice')
+    return (
+      <group>
+        <Cyl r={0.13} rTop={0.14} h={0.17} position={[0, 0.085, 0]} color={body} segments={32} />
+        <group position={[0, 0.17, 0]} scale={[1, 0.42, 1]}>
+          <Ball r={0.14} position={[0, 0, 0]} color={body} />
+        </group>
+        <Box size={[0.16, 0.014, 0.02]} position={[0, 0.235, 0]} color="#c9ccd4" />
+        <Cyl r={0.012} h={0.012} position={[0.05, 0.226, -0.03]} color="#2a2c33" segments={10} />
+        <Box size={[0.07, 0.03, 0.01]} position={[0, 0.1, 0.138]} material={disp} shadow={false} />
+        <group position={[0.05, 0.23, -0.03]}>
+          <Mist active={v.on} y={0.04} size={0.26} />
+        </group>
+      </group>
+    )
   return (
     <group>
       <Cyl r={0.14} rTop={0.13} h={0.2} position={[0, 0.1, 0]} color={body} segments={32} />

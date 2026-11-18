@@ -380,6 +380,22 @@ if (spot) {
   }
 }
 
+// --- Build bar search: a type or style option is found by its own name, with its preset card (GitHub issue #10) ---
+{
+  await H(() => window.__homescape.setMode('edit'))
+  await p.waitForTimeout(500)
+  const cards = async (q) => {
+    await p.fill('#build-search', q)
+    await p.waitForTimeout(250)
+    return p.$$eval('nav[aria-label="Build bar"] [data-wheel-row="cards"] button span.text-center', (els) => els.map((e) => e.textContent))
+  }
+  const ottoman = await cards('ottoman')
+  const rice = await cards('rice cooker')
+  await p.fill('#build-search', '')
+  ok(ottoman.includes('Pouf') && ottoman.includes('Ottoman'), `Searching "ottoman" finds the pouf (its Ottoman type) and the Ottoman card (${ottoman.join(', ')})`)
+  ok(rice.includes('Multicooker') && rice.includes('Rice cooker'), `Searching "rice cooker" finds the multicooker and the Rice cooker card (${rice.join(', ')})`)
+}
+
 // --- Horizontal rows: a plain mouse wheel scrolls the build bar's tab and card rows (Edit) and the room bar (View)
 // sideways, and does not zoom the camera ---
 {
