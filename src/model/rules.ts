@@ -1,7 +1,8 @@
 import { t } from '@/i18n'
 import { CATALOG, doorWidth, TREE_DEF_H, isSlidingDoor, isWallOpening, SLIDING_DOOR, sizeOf, WINDOW_BOTTOM, windowSize } from './catalog'
-import { inRoom, isAperture, isOutdoor, rectsOf, roomAt, WALL_H, WALL_IN } from './geometry'
+import { inRoom, isAperture, isOutdoor, rectsOf, roomAt, WALL_H, WALL_IN, WALL_T } from './geometry'
 import { sectionalArm } from './sofa'
+import { wallSides } from './stairs'
 import type { Item, ItemKind, Level, Rect, Room } from './types'
 
 /*
@@ -221,7 +222,7 @@ function localBox(x: number, z: number, rot: number, cx: number, cz: number, w: 
 }
 
 /** An item with a shape: kind, position, rotation and size settings (an L counter is two rectangles). */
-export type Shape = { kind: ItemKind; x: number; z: number; rot: number; len?: number; len2?: number; variant?: string; mount?: Item['mount'] }
+export type Shape = { kind: ItemKind; x: number; z: number; rot: number; len?: number; len2?: number; variant?: string; mount?: Item['mount']; walls?: Item['walls'] }
 
 /** Footprint rectangle in the item's own (local) frame: center (cx, cz) and w × d. The selection frame draws it too. */
 export interface LocalRect {
@@ -238,6 +239,8 @@ export interface LocalRect {
 export function localFootprints(s: Omit<Shape, 'x' | 'z' | 'rot'>): LocalRect[] {
   const [w, d] = sizeOf(s.kind, s.len, s.len2)
   const main = { cx: 0, cz: 0, w, d }
+  // Stairs with walls along their sides (model/stairs.ts): each wall is a thin rectangle outside the stairs
+  if (s.kind === 'stairs' && s.walls) return [main, ...wallSides(s).map((sx) => ({ cx: sx * (w / 2 + WALL_T / 2), cz: 0, w: WALL_T, d }))]
   // L shapes: a kitchen counter or a sectional sofa (model/sofa.ts) with its second run forward from the corner
   if ((s.kind !== 'kitchenCounter' && s.kind !== 'sofa') || (s.variant !== 'lLeft' && s.variant !== 'lRight')) return [main]
   const L = s.len ?? CATALOG[s.kind].size[0]

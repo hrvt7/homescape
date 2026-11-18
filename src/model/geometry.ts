@@ -249,16 +249,20 @@ function cutRuns(runs: WallRun[], cuts: WallRun[]): WallRun[] {
  * top: the highest point of a wall-mounted item or opening above the floor (rules.ts > wallTop): a half wall only takes
  * items below its top (a plug yes, a painting or a window no). Floor items (a counter) lean on half walls too.
  */
-export function wallSnap(rooms: Room[], x: number, z: number, depth: number, maxDist = 0.6, width?: number, aperture = false, exact = false, top?: number) {
+export function wallSnap(rooms: Room[], x: number, z: number, depth: number, maxDist = 0.6, width?: number, aperture = false, exact = false, top?: number, extra: WallRun[] = []) {
   let best: { x: number; z: number; rot: number; dist: number } | null = null
   const inset = aperture ? APERTURE_INSET : WALL_IN + depth / 2 + 0.01
   const ROT = WALL_ROT
   const tall = top != null && top > HALF_WALL_H - 0.02
-  for (const room of rooms) {
+  // extra: walls that are not rooms' walls, like the stairs' side walls (model/stairs.ts > stairsWallRuns); no door or
+  // window goes into them
+  const groups = [...rooms.map((room) =>
     // Outdoors the only wall is the house wall: items do not hang on a garden or balcony edge but on the house's outer face
-    const runs = isOutdoor(room)
+    isOutdoor(room)
       ? wallRuns(room, rooms, 'house').filter((r) => !(tall && r.half))
-      : cutRuns(wallRuns(room, [], 'edges'), [...wallRuns(room, rooms, 'open'), ...(tall ? wallRuns(room, rooms).filter((r) => r.half) : [])])
+      : cutRuns(wallRuns(room, [], 'edges'), [...wallRuns(room, rooms, 'open'), ...(tall ? wallRuns(room, rooms).filter((r) => r.half) : [])]),
+  ), aperture ? [] : extra]
+  for (const runs of groups) {
     for (const run of runs) {
       const along = run.horizontal ? x : z
       if (along < run.a0 - 0.2 || along > run.a1 + 0.2) continue
@@ -283,8 +287,8 @@ export function wallSnap(rooms: Room[], x: number, z: number, depth: number, max
  * Whether an item that sticks to walls stands against one, exactly where wallSnap puts it (a kitchen counter in an island
  * does not; rules.ts > FREESTANDING).
  */
-export function backOnWall(rooms: Room[], it: Pick<Item, 'kind' | 'x' | 'z' | 'rot' | 'len'>) {
-  const w = wallSnap(rooms, it.x, it.z, CATALOG[it.kind].size[1], 0.05, sizeOf(it.kind, it.len)[0])
+export function backOnWall(rooms: Room[], it: Pick<Item, 'kind' | 'x' | 'z' | 'rot' | 'len'>, extra: WallRun[] = []) {
+  const w = wallSnap(rooms, it.x, it.z, CATALOG[it.kind].size[1], 0.05, sizeOf(it.kind, it.len)[0], false, false, undefined, extra)
   if (!w) return false
   const d = w.rot - it.rot
   return Math.hypot(w.x - it.x, w.z - it.z) < 0.03 && Math.abs(Math.atan2(Math.sin(d), Math.cos(d))) < 0.01

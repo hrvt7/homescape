@@ -5,7 +5,8 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { deviceClass, domainOf, isActive, lightColor, lightLevel, num } from '@/ha/derive'
 import type { HassEntity } from '@/ha/types'
-import { APERTURE_INSET, WALL_CUT_H, WALL_INNER_H } from '@/model/geometry'
+import { APERTURE_INSET, WALL_CUT_H, WALL_H, WALL_INNER_H, WALL_T } from '@/model/geometry'
+import { U_FLIGHT, U_GAP, U_LANDING, U_SIZE, wallSides } from '@/model/stairs'
 import { roofView, useView } from '../camera'
 import { markShadows } from '../frame'
 import { Glow, Mist, Spin, useAmbient, useEased, useLitMaterial } from './effects'
@@ -2257,11 +2258,90 @@ function stairsGeometry() {
 }
 
 /**
- * Stairs (1 × 3.2 m): 14 steps from the first step at the +z end up to 2.8 m (the floor height) at the -z end; wooden
- * treads (woodGrainTexture), white risers and stringers, railing on the +x side (newel posts, handrail, balusters).
- * Repeated parts are merged: four meshes in total.
+ * U-shaped stairs (model/stairs.ts, 2.1 × 2.6 m): the first flight climbs toward -z on one side up to the half landing at
+ * the -z end, the second climbs back toward +z on the other side (side sB) up to 2.8 m. Solid white steps under wooden
+ * treads, a spine wall between the flights, handrails on the outer sides (not where the stairs have a wall) and along the
+ * landing. Built once per shape: three meshes.
  */
-export function Stairs() {
+function uStairsGeometry(sB: number, wallA: boolean, wallB: boolean) {
+  return cached(`stairs-u-${sB}-${wallA}-${wallB}`, () => {
+    const W = U_SIZE.len
+    const L = U_SIZE.len2
+    const fw = U_FLIGHT - 0.1
+    const half = STAIR_H / 2
+    const z0 = L / 2
+    const zl = -L / 2 + U_LANDING
+    const run = (z0 - zl) / 7
+    const rise = half / 7
+    const ax = -sB * (U_GAP / 2 + U_FLIGHT / 2)
+    const bx = sB * (U_GAP / 2 + U_FLIGHT / 2)
+    const treads: Part[] = []
+    const blocks: Part[] = []
+    for (let i = 0; i < 7; i++) {
+      // first flight: going up toward -z
+      const ta = (i + 1) * rise
+      const za = z0 - (i + 0.5) * run
+      treads.push({ g: boxG(fw, 0.04, run + 0.02), p: [ax, ta - 0.02, za] })
+      blocks.push({ g: boxG(fw, ta - 0.04, run), p: [ax, (ta - 0.04) / 2, za] })
+      // second flight: from the landing back toward +z
+      const tb = half + (i + 1) * rise
+      const zb = zl + (i + 0.5) * run
+      treads.push({ g: boxG(fw, 0.04, run + 0.02), p: [bx, tb - 0.02, zb] })
+      blocks.push({ g: boxG(fw, tb - 0.04, run), p: [bx, (tb - 0.04) / 2, zb] })
+    }
+    // half landing across the -z end, and the spine wall between the flights
+    treads.push({ g: boxG(W - 0.1, 0.04, U_LANDING), p: [0, half - 0.02, -L / 2 + U_LANDING / 2] })
+    blocks.push({ g: boxG(W - 0.1, half - 0.04, U_LANDING), p: [0, (half - 0.04) / 2, -L / 2 + U_LANDING / 2] })
+    blocks.push({ g: boxG(U_GAP, STAIR_H, z0 - zl), p: [0, STAIR_H / 2, (z0 + zl) / 2] })
+    // handrails 0.9 m above the treads on the outer sides and along the landing; balusters every step
+    const rail: Part[] = []
+    const ox = W / 2 - 0.05
+    const flight = (x: number, yBottom: number, zBottom: number, zTop: number) => {
+      rail.push({ g: boxG(0.07, 1.1, 0.07), p: [x, yBottom + 0.55, zBottom], c: C.kraftDark })
+      rail.push(rod([x, yBottom + 0.95, zBottom], [x, yBottom + half + 0.95, zTop], 0.03, C.kraftDark, 10))
+      for (let i = 1; i < 7; i++) {
+        const t = i / 7
+        const y = yBottom + t * half
+        const z = zBottom + (zTop - zBottom) * t
+        rail.push(rod([x, y + 0.02, z], [x, y + 0.95, z], 0.012, C.white, 6))
+      }
+    }
+    if (!wallA) flight(-sB * ox, 0, z0 - 0.05, zl)
+    if (!wallB) flight(sB * ox, half, zl, z0 - 0.05)
+    rail.push(rod([-ox, half + 0.95, -L / 2 + 0.05], [ox, half + 0.95, -L / 2 + 0.05], 0.03, C.kraftDark, 10))
+    for (const x of [-ox, ox]) rail.push({ g: boxG(0.07, 1.0, 0.07), p: [x, half + 0.5, -L / 2 + 0.05], c: C.kraftDark })
+    return { treads: merge(treads, true), blocks: merge(blocks), rail: merge(rail) }
+  })
+}
+
+/**
+ * Stairs: straight (1 × 3.2 m, 14 steps from the first step at the +z end up to 2.8 m, the floor height, at the -z end;
+ * wooden treads (woodGrainTexture), white risers and stringers, railing on the +x side) or U-shaped (uStairsGeometry).
+ * Optional walls along the long sides (Item.walls, model/stairs.ts): full height like an interior wall, low in the plan
+ * view or when interior walls are set to low. Repeated parts are merged.
+ */
+export function Stairs({ v }: P) {
+  const plan = useView((s) => s.plan)
+  const innerFull = useView((s) => s.innerWalls === 'full')
+  const fps = useView((s) => s.fps)
+  const u = v.opts.variant === 'uLeft' || v.opts.variant === 'uRight'
+  const sides = wallSides({ walls: v.opts.walls })
+  const W = u ? U_SIZE.len : 1
+  const L = u ? U_SIZE.len2 : STAIR_L
+  const wallH = fps ? WALL_H : plan || !innerFull ? WALL_INNER_H : WALL_H
+  const sB = v.opts.variant === 'uRight' ? 1 : -1
+  const walls = sides.map((sx) => <Box key={sx} size={[WALL_T, wallH, L]} position={[sx * (W / 2 + WALL_T / 2), wallH / 2, 0]} material={mat(C.wall)} />)
+  if (u) {
+    const g = uStairsGeometry(sB, sides.includes(-sB), sides.includes(sB))
+    return (
+      <group>
+        <M g={g.treads} m={woodMat(C.kraft)} />
+        <M g={g.blocks} m={mat(C.offWhite)} />
+        <M g={g.rail} m={vcMat(0.6)} />
+        {walls}
+      </group>
+    )
+  }
   const g = stairsGeometry()
   return (
     <group>
@@ -2269,6 +2349,7 @@ export function Stairs() {
       <M g={g.risers} m={mat(C.offWhite)} />
       <M g={g.stringers} m={mat(C.white)} />
       <M g={g.rail} m={vcMat(0.6)} />
+      {walls}
     </group>
   )
 }

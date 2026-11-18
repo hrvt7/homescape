@@ -1,3 +1,4 @@
+import { isUStairs, stairsSize, uSecondSide } from './stairs'
 import type { Item, Level, Rect } from './types'
 
 /*
@@ -8,25 +9,39 @@ import type { Item, Level, Rect } from './types'
  */
 
 export type Side = 'l' | 'r' | 't' | 'b'
+type Pt = { x: number; z: number }
 export interface Stairwell {
   id: string
   r: Rect
   /** Arrival edge (top of the stairs): no railing */
   open: Side
+  /** Only this part of the arrival edge is open (U stairs arrive on one half of it); the rest gets a railing */
+  openSeg?: { a: Pt; b: Pt }
 }
 
-const HALF_W = 0.55
-const HALF_L = 1.65
-
-/** Footprint of the stairs (axis-aligned after rotation) and the arrival edge */
+/**
+ * Footprint of the stairs (axis-aligned after rotation, 5 cm wider on each side) and the arrival edge. Straight stairs
+ * arrive at their local -z end; U stairs (model/stairs.ts) at their +z end, on the second flight's half only.
+ */
 export function stairFootprint(it: Item): Stairwell {
   const c = Math.cos(it.rot)
   const s = Math.sin(it.rot)
-  const hx = Math.abs(c) * HALF_W + Math.abs(s) * HALF_L
-  const hz = Math.abs(s) * HALF_W + Math.abs(c) * HALF_L
-  // The top end is local -z: direction (-sin, -cos) in the world
-  const open: Side = Math.abs(s) > Math.abs(c) ? (s > 0 ? 'l' : 'r') : c > 0 ? 't' : 'b'
-  return { id: it.id, r: { x: it.x - hx, z: it.z - hz, w: hx * 2, d: hz * 2 }, open }
+  const { w, l } = stairsSize(it)
+  const hw = w / 2 + 0.05
+  const hl = l / 2 + 0.05
+  const hx = Math.abs(c) * hw + Math.abs(s) * hl
+  const hz = Math.abs(s) * hw + Math.abs(c) * hl
+  const u = isUStairs(it)
+  // Arrival direction in the world: local -z is (-sin, -cos), local +z (sin, cos)
+  const dx = u ? s : -s
+  const dz = u ? c : -c
+  const open: Side = Math.abs(dx) > Math.abs(dz) ? (dx < 0 ? 'l' : 'r') : dz < 0 ? 't' : 'b'
+  const r = { x: it.x - hx, z: it.z - hz, w: hx * 2, d: hz * 2 }
+  if (!u) return { id: it.id, r, open }
+  // The second flight's half of the +z edge: from the middle to its outer side
+  const at = (lx: number, lz: number) => ({ x: it.x + lx * c + lz * s, z: it.z - lx * s + lz * c })
+  const sx = uSecondSide(it)
+  return { id: it.id, r, open, openSeg: { a: at(0, hl), b: at(sx * hw, hl) } }
 }
 
 /** Holes in this level's floor opened by the stairs on the level right below */
@@ -84,6 +99,17 @@ export function railEdges(w: Stairwell, room: Rect[]): { a: { x: number; z: numb
     const nz = a.z === b.z ? 0.12 : 0
     return !inside(mx + nx, mz + nz) || !inside(mx - nx, mz - nz)
   }
+  // The arrival edge of U stairs is open on one half only: the other half (above the first flight) gets a railing
+  const parts: [Side, Pt, Pt][] = sides.flatMap(([s, a, b]): [Side, Pt, Pt][] => {
+    if (s !== w.open) return [[s, a, b]]
+    if (!w.openSeg) return []
+    const horiz = a.z === b.z
+    const along = (p: Pt) => (horiz ? p.x : p.z)
+    const lo = Math.min(along(w.openSeg.a), along(w.openSeg.b))
+    const hi = Math.max(along(w.openSeg.a), along(w.openSeg.b))
+    const pt = (v: number): Pt => (horiz ? { x: v, z: a.z } : { x: a.x, z: v })
+    return ([[along(a), lo], [hi, along(b)]] as [number, number][]).filter(([p, q]) => q - p > 0.05).map(([p, q]): [Side, Pt, Pt] => [s, pt(p), pt(q)])
+  })
   // Without a room (walk mode collision) all edges
-  return sides.filter(([s, a, b]) => s !== w.open && (!room.length || !onWall(a, b))).map(([, a, b]) => ({ a, b }))
+  return parts.filter(([, a, b]) => !room.length || !onWall(a, b)).map(([, a, b]) => ({ a, b }))
 }

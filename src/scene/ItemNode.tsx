@@ -15,6 +15,7 @@ import { backOnWall, doorSides, isAperture, isOutdoor, snap, wallSnap } from '@/
 import { activeLevel, useLayout } from '@/model/layoutStore'
 import { usePlacement } from '@/model/placement'
 import { APPLIANCE_STACK, checkItem, FREE_SNAP, FREESTANDING, isWallMounted, snapsToWall, STACKABLE, surfaceAt, wallTop } from '@/model/rules'
+import { stairsWallRuns } from '@/model/stairs'
 import { counterSink } from '@/model/counter'
 import { carryPatches, containerOf, contentsOf, DRAWER_SLIDE, INTERIOR, OPENS, shelfAt, toLocal } from '@/model/containers'
 import type { Item } from '@/model/types'
@@ -81,7 +82,7 @@ function ItemNodeImpl({ item, entity, related, night, levelId, still = false }: 
     return Boolean(back && !isOutdoor(back))
   })
   // A kitchen cabinet or appliance standing away from a wall (an island): the counter draws no wall cabinets then
-  const free = useLayout((s) => FREESTANDING.includes(item.kind) && !backOnWall(lvOf(s)?.rooms ?? [], item))
+  const free = useLayout((s) => FREESTANDING.includes(item.kind) && !backOnWall(lvOf(s)?.rooms ?? [], item, stairsWallRuns(lvOf(s)?.items ?? [])))
   const edit = useLayout((s) => s.mode === 'edit') && !still
   // In view mode only linked (controllable) items are clickable
   // Cabinets and drawers are clickable in view mode too: opens and closes the door (scene/bins.ts)
@@ -93,12 +94,12 @@ function ItemNodeImpl({ item, entity, related, night, levelId, still = false }: 
   const swingOut = item.swing === 'out'
   const fixed = item.kind === 'window' && Boolean(item.fixed)
   const double = item.kind === 'window' && !fixed && Boolean(item.double)
-  const { len, drawers, top, body, fedAt, shape, variant, len2, led, ledEntity, intensity, mount, beam, sink, dishwasher } = item
+  const { len, drawers, top, body, fedAt, shape, variant, len2, led, ledEntity, intensity, mount, beam, sink, dishwasher, walls } = item
   // Built-in sink of the kitchen counter (model/counter.ts): in the middle unless there is a separate sink next to it
   const sinkAt = useLayout((s) => (item.kind === 'kitchenCounter' ? (counterSink(lvOf(s)?.items ?? [], item) ?? undefined) : undefined))
   const opts = useMemo(
-    () => ({ len, drawers, top, body, fedAt, shape, variant, len2, led, ledEntity, intensity, mount, beam, sinkAt, sink, dishwasher }),
-    [len, drawers, top, body, fedAt, shape, variant, len2, led, ledEntity, intensity, mount, beam, sinkAt, sink, dishwasher],
+    () => ({ len, drawers, top, body, fedAt, shape, variant, len2, led, ledEntity, intensity, mount, beam, sinkAt, sink, dishwasher, walls }),
+    [len, drawers, top, body, fedAt, shape, variant, len2, led, ledEntity, intensity, mount, beam, sinkAt, sink, dishwasher, walls],
   )
   useCursor(hover && interactive && !busy())
   // If the quick on/off pill opens on this item, it is placed by this group's body (scene/QuickAnchor.tsx)
@@ -218,7 +219,7 @@ function ItemNodeImpl({ item, entity, related, night, levelId, still = false }: 
     const mounted = isWallMounted(item.kind, item.variant, item.mount)
     if (STACKABLE.includes(item.kind) && !mounted) ny = surfaceAt(level.items, x, z, item.id)?.y ?? shelfAt(level.items, x, z, item.kind, item.id)
     if (snapsToWall(item.kind, item.mount) && (ny == null || mounted)) {
-      const w = wallSnap(level.rooms, x, z, meta.size[1], FREESTANDING.includes(item.kind) ? FREE_SNAP : 0.6, sizeOf(item.kind, item.len)[0], isAperture(item.kind), item.mount === 'wall', wallTop(item))
+      const w = wallSnap(level.rooms, x, z, meta.size[1], FREESTANDING.includes(item.kind) ? FREE_SNAP : 0.6, sizeOf(item.kind, item.len)[0], isAperture(item.kind), item.mount === 'wall', wallTop(item), stairsWallRuns(level.items))
       if (w) ({ x, z, rot } = w)
       else onWall = false
     }
@@ -235,7 +236,7 @@ function ItemNodeImpl({ item, entity, related, night, levelId, still = false }: 
       const [bw, bd] = sizeOf(box.box.kind, box.box.len)
       if (Math.abs(lx) < bw / 2 - 0.03 && Math.abs(lz) < bd / 2) ny = cur.y
     }
-    const chk = checkItem(level, { kind: item.kind, x, z, rot, y: ny, swing: item.swing, len: item.len, len2: item.len2, variant: item.variant, mount: item.mount }, item.id, onWall)
+    const chk = checkItem(level, { kind: item.kind, x, z, rot, y: ny, swing: item.swing, len: item.len, len2: item.len2, variant: item.variant, mount: item.mount, walls: item.walls }, item.id, onWall)
     usePlacement.getState().setMoving({ id: item.id, ok: chk.ok, reason: chk.reason })
     if (x !== item.x || z !== item.z || rot !== item.rot || ny !== item.y) {
       // Moving a cabinet carries its contents along (their local positions are kept)

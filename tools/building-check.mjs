@@ -480,6 +480,91 @@ await p.keyboard.press('Escape')
   await p.waitForTimeout(400)
 }
 
+// --- U-shaped stairs with walls (GitHub issue #10): two flights and a half landing, the stairwell open on the arrival half,
+// side walls that block walking and hold items ---
+{
+  await setLevel(plan.l0)
+  await p.waitForTimeout(300)
+  // The sample home's stairs become U-shaped (turning right on the landing) with a wall on the left, in the middle of the foyer
+  const Ux = S.x + 0.94
+  await p.evaluate(({ id, x }) => window.__homescape.getState().layout.updateItem(id, { x, variant: 'uRight', len: 2.1, len2: 2.6, walls: 'left' }), { id: S.id, x: Ux })
+  await p.waitForTimeout(600)
+  const m = await p.evaluate(async (id) => {
+    const st = await import('/src/model/stairs.ts')
+    const sw = await import('/src/model/stairwell.ts')
+    const geo = await import('/src/model/geometry.ts')
+    const fps = await import('/src/scene/fps.ts')
+    const pets = await import('/src/model/pets.ts')
+    const s = window.__homescape.getState().layout
+    const lv = s.layout.levels.find((l) => (l.elevation ?? 0) === 0)
+    const up = s.layout.levels.find((l) => (l.elevation ?? 0) === 1)
+    const it = lv.items.find((i) => i.id === id)
+    const at = (lx, lz) => ({ x: it.x + lx * Math.cos(it.rot) + lz * Math.sin(it.rot), z: it.z - lx * Math.sin(it.rot) + lz * Math.cos(it.rot) })
+    const h = (lx, lz) => st.stairsHeightLocal(it, lx, lz)
+    const heights = [h(-0.55, 1.25), h(-0.55, 0.5), h(0.3, -0.8), h(0.55, -0.25), h(0.55, 1.25)].map((v) => Math.round(v * 100) / 100)
+    const well = sw.stairwellsOf(s.layout.levels, up).find((w) => w.id === id)
+    const rails = well ? sw.railEdges(well, []) : []
+    const railLen = rails.reduce((a, e) => a + Math.hypot(e.b.x - e.a.x, e.b.z - e.a.z), 0)
+    const perimeter = well ? 2 * (well.r.w + well.r.d) : 0
+    const segs = st.stairsSegments(lv.items)
+    const coll = fps.buildColliders(lv).segs.length - fps.buildColliders({ ...lv, items: lv.items.map((i) => (i.id === id ? { ...i, walls: undefined } : i)) }).segs.length
+    const wallPt = at(-(1.05 + 0.05), 0)
+    const grid = pets.buildPetGrid(lv, 'cat')
+    const blocked = !pets.isFree(grid, wallPt.x, wallPt.z)
+    // A bookshelf brought near the wall's outer face sticks to it, facing away from the stairs
+    const runs = st.stairsWallRuns(lv.items)
+    const out = at(-(1.05 + 0.4), 0.2)
+    const snap = geo.wallSnap(lv.rooms, out.x, out.z, 0.35, 0.6, 1.2, false, false, undefined, runs)
+    return { heights, open: Boolean(well?.openSeg), railShare: perimeter ? railLen / perimeter : 0, segs: segs.length, coll, blocked, runs: runs.length, snap, face: at(-(1.05 + 0.1 + 0.175 + 0.01), 0.2) }
+  }, S.id)
+  ok(m.heights[0] < 0.2 && Math.abs(m.heights[2] - 1.4) < 0.01 && m.heights[3] > 1.35 && m.heights[3] < 1.6 && m.heights[4] > 2.6, `U stairs: the first flight climbs to the landing at half height, the second flight on to the floor above (${m.heights.join(' / ')} m)`)
+  ok(m.open && m.railShare > 0.8 && m.railShare < 0.95, `The stairwell of U stairs is open only on the arrival half of its edge; railings on the rest (${Math.round(m.railShare * 100)}% of the edge)`)
+  ok(m.segs === 2 && m.coll === 1 && m.blocked, `The spine between the flights and the side wall block walking and the pets (${m.segs} segments, the wall adds ${m.coll} collider, wall cell blocked ${m.blocked})`)
+  ok(m.runs === 1 && m.snap && Math.hypot(m.snap.x - m.face.x, m.snap.z - m.face.z) < 0.03, `Items stick to the outer face of the stairs' wall (${m.runs} wall, snapped ${m.snap ? `${m.snap.x.toFixed(2)}, ${m.snap.z.toFixed(2)}` : 'no'})`)
+
+  // Walk: up the first flight to the landing, then on the landing turn and climb the second flight to the upper floor
+  const at = (lx, lz) => ({ x: Ux + lx * Math.cos(S.rot) + lz * Math.sin(S.rot), z: S.z - lx * Math.sin(S.rot) + lz * Math.cos(S.rot) })
+  await p.click('#fps-toggle')
+  await p.waitForSelector('#fps-hud')
+  await p.waitForTimeout(600)
+  const a0 = at(-0.55, 1.7)
+  await H('fpsTeleport', a0.x, a0.z, S.rot, 0)
+  await p.waitForTimeout(400)
+  // Walk until the height reaches the landing (half a floor), then stop: further on is the landing's back edge
+  await p.keyboard.down('KeyW')
+  let onLanding = await H('fps')
+  for (let t = 0; t < 3000 && onLanding.h < 1.35; t += 80) {
+    await p.waitForTimeout(80)
+    onLanding = await H('fps')
+  }
+  await p.keyboard.up('KeyW')
+  ok(onLanding.h > 1.35 && onLanding.h < 1.45, `Walking up the first flight reaches the landing (height ${onLanding.h.toFixed(2)} m)`)
+  const b0 = at(0.55, -0.7)
+  await H('fpsTeleport', b0.x, b0.z, S.rot + Math.PI, 0)
+  await p.waitForTimeout(400)
+  await p.keyboard.down('KeyW')
+  let upU = false
+  for (let t = 0; t < 3500 && !upU; t += 100) {
+    await p.waitForTimeout(100)
+    upU = (await p.evaluate(() => window.__homescape.getState().layout.levelId)) === plan.l1
+  }
+  await p.waitForTimeout(400)
+  await p.keyboard.up('KeyW')
+  ok(upU, 'Walking up the second flight of U stairs reaches the upper floor')
+  await p.keyboard.press('Escape')
+  await p.keyboard.press('Escape')
+  await p.waitForTimeout(500)
+  // Pictures from above: the lower floor (stairs with the wall) and the upper floor (the stairwell and its railing)
+  await setLevel(plan.l0)
+  await H('focusRoom', plan.hall ? (await p.evaluate(() => window.__homescape.getState().layout.layout.levels.find((l) => (l.elevation ?? 0) === 0).rooms.find((r) => r.name && r.x <= 0.5 && r.x + r.w >= 0.5 && r.z <= 7.2 && r.z + r.d >= 7.2)?.id)) : null)
+  await p.waitForTimeout(1500)
+  await shot('stairs-u-lower')
+  await setLevel(plan.l1)
+  await H('focusRoom', plan.hall)
+  await p.waitForTimeout(1500)
+  await shot('stairs-u-upper')
+}
+
 // --- Cleanup ---
 await p.evaluate(
   ([prevId, id]) => {

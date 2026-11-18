@@ -510,6 +510,8 @@ export const OPTIONS: Partial<
       variantDef?: string
       /** Length per variant (Item.len): a power strip's length changes with its outlet count, and so does its footprint */
       variantLen?: Record<string, number>
+      /** Second size per variant (Item.len2): the stairs' length changes with their shape */
+      variantLen2?: Record<string, number>
       /** Short note below the settings section of the card */
       note?: string
       /** LED options (Item.led value, label); the first is "none" */
@@ -878,7 +880,19 @@ export const OPTIONS: Partial<
   },
   bicycle: { variantLabel: t('Type'), variants: [['bike', t('Bicycle')], ['ebike', t('E-bike')]], variantDef: 'bike', body: t('Bike frame color'), bodyList: ACCENT_COLORS },
   motorcycle: { variantLabel: t('Type'), variants: [['motorbike', t('Motorcycle')], ['scooter', t('Scooter')]], variantDef: 'motorbike', body: t('Color'), bodyList: ACCENT_COLORS },
-  stairs: { note: t('Put the stairs on the lower level: in first-person walk mode you climb them to the level above. The room with the stairs is drawn without a ceiling.') },
+  // Straight (1 x 3.2 m) or U-shaped with a half landing (2.1 x 2.6 m; model/stairs.ts), turning left or right on the landing
+  stairs: {
+    variantLabel: t('Shape'),
+    variants: [
+      ['straight', t('Straight')],
+      ['uLeft', t('U, turns left')],
+      ['uRight', t('U, turns right')],
+    ],
+    variantDef: 'straight',
+    variantLen: { straight: 1, uLeft: 2.1, uRight: 2.1 },
+    variantLen2: { straight: 3.2, uLeft: 2.6, uRight: 2.6 },
+    note: t('Put the stairs on the lower level: in first-person walk mode you climb them to the level above. The room with the stairs is drawn without a ceiling.'),
+  },
   garageDoor: { note: t("Bind the garage door's motor (cover) or door sensor: the panels slide up as far as it is open.") },
   pegboard: { body: t('Panel color') },
   deskPalm: { body: t('Pot color'), bodyDef: '#ffffff' },
@@ -1145,6 +1159,7 @@ export const ITEM_PRESETS: ItemPreset[] = [
   // A big tree planted in the garden or on a terrace; the height slider in its card goes from 0.6 to 5 m
   { id: 'christmasTreeOutdoor', kind: 'christmasTree', label: t('Outdoor Christmas tree'), sub: t('{h} m · planted', { h: formatNumber(3.5) }), extra: { variant: 'ground', len: 3.5 } },
   { id: 'sectional', kind: 'sofa', label: t('Sectional sofa'), sub: t('L-shaped'), extra: { variant: 'lRight', len: 2.6, len2: 2 } },
+  { id: 'stairsU', kind: 'stairs', label: t('U-shaped stairs'), sub: t('two flights and a landing'), extra: { variant: 'uRight', len: 2.1, len2: 2.6 } },
   // Types that people look for by their own name (the search finds them too)
   { id: 'ottoman', kind: 'pouf', label: t('Ottoman'), sub: t('footrest'), extra: { variant: 'ottoman' } },
   { id: 'riceCooker', kind: 'multicooker', label: t('Rice cooker'), sub: t('goes on a counter'), extra: { variant: 'rice' } },
@@ -1158,7 +1173,7 @@ export const windowSize = (it: { len?: number; len2?: number }) => ({ w: it.len 
 export function sizeOf(kind: ItemKind, len?: number, len2?: number): [number, number] {
   const [w, d] = CATALOG[kind].size
   // The second size only for kinds that use it as depth (ceiling strip, rug); the L arm of a counter is computed separately.
-  if (kind === 'ceilingStrip' || kind === 'rug' || kind === 'doormat' || kind === 'pool' || kind === 'kitchenIsland') return [len ?? w, len2 ?? d]
+  if (kind === 'ceilingStrip' || kind === 'rug' || kind === 'doormat' || kind === 'pool' || kind === 'kitchenIsland' || kind === 'stairs') return [len ?? w, len2 ?? d]
   // A ceiling fan is round: the blade span in both directions
   if (kind === 'ceilingFan') return [len ?? w, len ?? d]
   // A Christmas tree's len is its height; the round footprint grows with it

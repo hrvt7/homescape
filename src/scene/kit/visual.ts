@@ -68,6 +68,8 @@ export interface ItemOpts {
   /** Kitchen island: built-in sink and dishwasher (Item.sink, Item.dishwasher; placed by model/counter.ts > islandParts) */
   sink?: Item['sink']
   dishwasher?: Item['dishwasher']
+  /** Stairs: walls along the long sides (Item.walls; model/stairs.ts) */
+  walls?: 'left' | 'right' | 'both'
 }
 
 /**

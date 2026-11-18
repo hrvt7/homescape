@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { APERTURE_INSET, besideDoor, frontDoor, inRoom, isOutdoor, rectsOf, runOpenings, WALL_IN, wallRuns } from '@/model/geometry'
-import { FLOOR_H } from '@/model/layoutStore'
+import { stairsHeightLocal, stairsSegments } from '@/model/stairs'
 import { footprints, layerOf, type Box2 } from '@/model/rules'
 import type { Item, Level } from '@/model/types'
 
@@ -72,6 +72,8 @@ export function buildColliders(level: Level, rails: { a: { x: number; z: number 
         segs.push(run.horizontal ? { x1: run.a0, z1: run.line, x2: run.a1, z2: run.line, half: 0.03 } : { x1: run.line, z1: run.a0, x2: run.line, z2: run.a1, half: 0.03 })
       }
   }
+  // Stairs: walls along their sides and the spine between the flights of U stairs (model/stairs.ts)
+  for (const { a, b } of stairsSegments(level.items)) segs.push({ x1: a.x, z1: a.z, x2: b.x, z2: b.z, half: WALL_IN })
   const boxes: Box2[] = []
   for (const it of level.items) {
     if (WALKABLE.includes(it.kind)) continue
@@ -148,8 +150,8 @@ export function stairHeight(it: Item, x: number, z: number): number | null {
   const dz = z - it.z
   const lx = dx * c - dz * s
   const lz = dx * s + dz * c
-  if (Math.abs(lx) > 0.55 || Math.abs(lz) > 1.65) return null
-  return Math.max(0, Math.min(1, (1.6 - lz) / 3.2)) * FLOOR_H
+  // Straight or U-shaped (model/stairs.ts): STAIRS_H equals FLOOR_H
+  return stairsHeightLocal(it, lx, lz)
 }
 
 /**

@@ -340,6 +340,11 @@ export interface Item {
    * sash follows the first window sensor bound to it, the right sash the second (model/sashes.ts). Ignored when fixed.
    */
   double?: boolean
+  /**
+   * Stairs: walls along the long sides (seen from the bottom of the stairs looking up). They render like walls, block
+   * walking and items stand against their outer faces (model/stairs.ts; GitHub issue #10).
+   */
+  walls?: 'left' | 'right' | 'both'
   /** Length of items with adjustable length (local x, m): desk */
   len?: number
   /** Drawer unit of the desk */

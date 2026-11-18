@@ -12,6 +12,7 @@ import { activeHomeId, activeLevel, homesOf, useLayout } from '@/model/layoutSto
 import { usePlacement } from '@/model/placement'
 import { maxWidth, PANEL_DEFAULT, usePanel } from './panelState'
 import { checkItem, isWallMounted, MOUNTABLE, mountRange, overlapsRoom, SURFACE_Y, surfaceAt, wallTop } from '@/model/rules'
+import { stairsWallRuns } from '@/model/stairs'
 import { containerOf, INTERIOR, moveWithContents, placeInside, toLocal } from '@/model/containers'
 import { counterSink, islandParts } from '@/model/counter'
 import { mountCenter, mountY, setMountY, setWallMount } from './mount'
@@ -465,16 +466,16 @@ function FurnitureOptions({ item }: { item: Item }) {
   const tryPatch = (patch: Partial<Item>, record = true, what?: string) => {
     const level = activeLevel(useLayout.getState())
     if (!level) return
-    const shapes = 'len' in patch || 'len2' in patch || 'y' in patch || ('variant' in patch && SHAPE_VARIANTS.includes(item.kind))
+    const shapes = 'len' in patch || 'len2' in patch || 'y' in patch || 'walls' in patch || ('variant' in patch && SHAPE_VARIANTS.includes(item.kind))
     if (!shapes) return updateItem(item.id, patch, record)
     // A wall-mounted power strip or an LED strip snaps to the wall again when it gets longer: at the end of a wall it slides
     // in, never past it
     if ((item.mount === 'wall' || item.kind === 'ledStrip') && 'len' in patch) {
-      const w = wallSnap(level.rooms, item.x, item.z, CATALOG[item.kind].size[1], 0.2, sizeOf(item.kind, patch.len)[0], false, true, wallTop(item))
+      const w = wallSnap(level.rooms, item.x, item.z, CATALOG[item.kind].size[1], 0.2, sizeOf(item.kind, patch.len)[0], false, true, wallTop(item), stairsWallRuns(level.items))
       if (w) patch = { ...patch, x: w.x, z: w.z }
     }
     const next = { ...item, ...patch }
-    const chk = checkItem(level, { kind: next.kind, x: next.x, z: next.z, rot: next.rot, y: next.y, len: next.len, len2: next.len2, variant: next.variant, mount: next.mount, swing: next.swing }, item.id)
+    const chk = checkItem(level, { kind: next.kind, x: next.x, z: next.z, rot: next.rot, y: next.y, len: next.len, len2: next.len2, variant: next.variant, mount: next.mount, swing: next.swing, walls: next.walls }, item.id)
     if (!chk.ok) return useHa.setState({ notice: what ? t("{option} doesn't fit: {reason}", { option: what, reason: chk.reason ?? '' }) : t("This setting doesn't fit: {reason}", { reason: chk.reason ?? '' }) })
     updateItem(item.id, patch, record)
   }
@@ -565,12 +566,33 @@ function FurnitureOptions({ item }: { item: Item }) {
                 key={k}
                 type="button"
                 className={seg((item.variant ?? opt.variantDef ?? opt.variants![0][0]) === k)}
-                onClick={() => tryPatch({ variant: k, ...(opt.variantLen ? { len: opt.variantLen[k] } : {}), ...(item.kind === 'tv' ? { y: tvHeight(item, k) } : {}) }, true, label)}
+                onClick={() => tryPatch({ variant: k, ...(opt.variantLen ? { len: opt.variantLen[k] } : {}), ...(opt.variantLen2 ? { len2: opt.variantLen2[k] } : {}), ...(item.kind === 'tv' ? { y: tvHeight(item, k) } : {}) }, true, label)}
               >
                 {label}
               </button>
             ))}
           </div>
+        </div>
+      )}
+      {item.kind === 'stairs' && (
+        // Walls along the stairs' long sides (model/stairs.ts): items stand against them, walking is blocked
+        <div className="grid gap-1.5">
+          <span className="text-[12px] font-semibold text-ink-2">{t('Walls')}</span>
+          <div className="flex gap-1.5">
+            {(
+              [
+                [undefined, t('None')],
+                ['left', t('Left')],
+                ['right', t('Right')],
+                ['both', t('Both sides')],
+              ] as const
+            ).map(([k, label]) => (
+              <button key={label} type="button" data-stair-walls={k ?? 'none'} className={seg(item.walls === k)} onClick={() => tryPatch({ walls: k }, true, label)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <span className="text-[11px] text-ink-3">{t('Seen from the bottom of the stairs. Furniture and wall items can stand against the walls.')}</span>
         </div>
       )}
       {range2 && (!range2.onlyL || isL) && (
@@ -1003,7 +1025,7 @@ function HeatingKind({ item }: { item: Item }) {
     const level = activeLevel(useLayout.getState())
     if (!level || kind === item.kind) return
     const [w, d] = CATALOG[kind].size
-    const at = wallSnap(level.rooms, item.x, item.z, d, 0.6, w, false, true, wallTop({ kind }))
+    const at = wallSnap(level.rooms, item.x, item.z, d, 0.6, w, false, true, wallTop({ kind }), stairsWallRuns(level.items))
     const patch: Partial<Item> = { kind, ...(at ? { x: at.x, z: at.z, rot: at.rot } : {}), y: undefined, len: undefined, variant: undefined }
     const next = { ...item, ...patch }
     const chk = checkItem(level, { kind, x: next.x, z: next.z, rot: next.rot }, item.id)

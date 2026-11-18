@@ -4,6 +4,7 @@ import { sizeOf } from './catalog'
 import { bounds, isOutdoor, rectsOf, runOpenings, WALL_IN, wallRuns } from './geometry'
 import { footprints, layerOf } from './rules'
 import { isSectional, sofaSeats } from './sofa'
+import { stairsSegments } from './stairs'
 import type { Item, ItemKind, Level, Rect, Room } from './types'
 
 /*
@@ -238,6 +239,11 @@ function makeGrid(level: Level, species: Mover, cell: number): PetGrid {
       }
       push(a, end)
     }
+  }
+  // stairs: walls along their sides and the spine between U flights (model/stairs.ts)
+  for (const { a, b } of stairsSegments(level.items)) {
+    const half = WALL_IN + clear
+    block(Math.min(a.x, b.x) - half, Math.max(a.x, b.x) + half, Math.min(a.z, b.z) - half, Math.max(a.z, b.z) + half, (x, z) => segDist(x, z, a.x, a.z, b.x, b.z) < half)
   }
   // large floor items (tables and chairs can be passed under; small items are no obstacle)
   const under = UNDER[species]

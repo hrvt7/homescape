@@ -3,6 +3,7 @@ import { CATALOG, sizeOf } from '@/model/catalog'
 import { wallSnap } from '@/model/geometry'
 import { activeLevel, useLayout } from '@/model/layoutStore'
 import { checkItem, DEFAULT_MOUNT_Y, isWallMounted, mountRange, surfaceAt, wallSpan, wallTop } from '@/model/rules'
+import { stairsWallRuns } from '@/model/stairs'
 import type { Item } from '@/model/types'
 import { t } from '@/i18n'
 
@@ -58,7 +59,7 @@ export function setWallMount(item: Item, wall: boolean) {
   if (!level || (item.mount === 'wall') === wall) return
   let patch: Partial<Item>
   if (wall) {
-    const w = wallSnap(level.rooms, item.x, item.z, CATALOG[item.kind].size[1], 1.2, sizeOf(item.kind, item.len)[0], false, true, wallTop({ ...item, mount: 'wall', y: undefined }))
+    const w = wallSnap(level.rooms, item.x, item.z, CATALOG[item.kind].size[1], 1.2, sizeOf(item.kind, item.len)[0], false, true, wallTop({ ...item, mount: 'wall', y: undefined }), stairsWallRuns(level.items))
     if (!w) return useHa.setState({ notice: t('To hang it on the wall, first move it next to a wall (no wall within {distance} m)', { distance: 1.2 }) })
     patch = { mount: 'wall', x: w.x, z: w.z, rot: w.rot, y: undefined }
   } else {
@@ -87,7 +88,7 @@ export function nudgeAlongWall(item: Item, d: number) {
   const x = Math.round((item.x + Math.cos(item.rot) * d) * 1000) / 1000
   const z = Math.round((item.z - Math.sin(item.rot) * d) * 1000) / 1000
   const aperture = item.kind === 'window'
-  const w = wallSnap(level.rooms, x, z, CATALOG[item.kind].size[1], 0.05, sizeOf(item.kind, item.len)[0], aperture, item.mount === 'wall', wallTop(item))
+  const w = wallSnap(level.rooms, x, z, CATALOG[item.kind].size[1], 0.05, sizeOf(item.kind, item.len)[0], aperture, item.mount === 'wall', wallTop(item), stairsWallRuns(level.items))
   const turn = w ? Math.abs(Math.atan2(Math.sin(w.rot - item.rot), Math.cos(w.rot - item.rot))) : 1
   if (!w || turn > 0.01) return useHa.setState({ notice: t('Reached the end of the wall') })
   const chk = checkItem(level, { kind: item.kind, x: w.x, z: w.z, rot: item.rot, y: item.y, variant: item.variant, mount: item.mount, len: item.len, len2: item.len2 }, item.id)
