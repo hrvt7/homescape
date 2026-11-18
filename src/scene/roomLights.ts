@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { deviceClass, isActive, lightColor, lightLevel } from '@/ha/derive'
 import type { HassEntity } from '@/ha/types'
 import { bindingsOf, ledOf, ledSource } from '@/model/bindings'
-import { BEAM, isSlidingDoor, isWallOpening } from '@/model/catalog'
+import { BEAM, isSlidingDoor, isWallOpening, treeScale } from '@/model/catalog'
 import { apertureOf, doorSides, isOutdoor, rectsOf, roomAt, WALL_H, WALL_T } from '@/model/geometry'
 import type { Item, ItemKind, Level, Rect, Room } from '@/model/types'
 import { openNeighbors } from '@/model/walls'
@@ -482,6 +482,10 @@ export function computeRoomLights(level: Level, entities: Record<string, HassEnt
         // One light per fixture lens; it lights all open areas within range (the pole's sidewalk, the road, the crosswalk)
         const heads = STREET_LAMP[it.variant ?? 'single'] ?? STREET_LAMP.single
         for (const at of heads) push(it, at, spec.range, spec.power, 0, _c)
+      } else if (it.kind === 'christmasTree') {
+        // The tree scales with its height (Item.len): the light rises to its middle, a big outdoor tree reaches further and shines brighter
+        const k = treeScale(it.len)
+        push(it, [0, spec.at[1] * k, 0], (spec.range as number) * Math.max(0.7, k), spec.power * Math.max(0.6, Math.sqrt(k)), 0, _c.set(lightColor(e)).multiplyScalar(level))
       } else push(it, spec.at, spec.range, spec.power, spec.type, _c.set(lightColor(e)).multiplyScalar(level), it.kind === 'ledStrip' && it.len ? it.len / 2 : spec.half)
       continue
     }

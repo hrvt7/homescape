@@ -2369,6 +2369,54 @@ ok(components(L) === 1, `Inner doors are added when an old plan (without inner d
   await p.waitForTimeout(500)
 }
 
+// Christmas tree height (Item.len): the card's slider scales the tree; indoors it must fit under the ceiling, outdoors it can reach 5 m
+{
+  const ids = await p.evaluate(() => {
+    const L = window.__homescape.getState().layout
+    const den = L.addRoom({ name: 'Tree den', x: 60, z: 60, w: 4, d: 4 })
+    const yard = L.addRoom({ name: 'Tree yard', x: 64, z: 60, w: 8, d: 6, type: 'garden', floor: 'grass' })
+    const inside = L.addItem('christmasTree', 62, 62, 0)
+    const outside = L.addItem('christmasTree', 68, 63, 0, null, undefined, { len: 3.5, variant: 'ground' })
+    L.setMode('edit')
+    return { den, yard, inside, outside }
+  })
+  const tree = (id) => p.evaluate((id) => window.__homescape.getState().layout.layout.levels.flatMap((l) => l.items).find((i) => i.id === id), id)
+  const slide = async (id, v) => {
+    await p.evaluate((id) => window.__homescape.select({ type: 'item', id }), id)
+    await p.waitForSelector(`#len-${id}`)
+    await p.evaluate(([id, v]) => {
+      const el = document.querySelector(`#len-${id}`)
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, String(v))
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+    }, [id, v])
+    await p.waitForTimeout(300)
+    return (await tree(id))?.len
+  }
+  await p.evaluate((id) => window.__homescape.select({ type: 'item', id }), ids.inside)
+  await p.waitForSelector(`#len-${ids.inside}`)
+  const card = await p.textContent('#side-panel')
+  ok(/Tree height/.test(card) && /2\.00 m/.test(card) && /In a pot/.test(card) && /Planted/.test(card), 'The Christmas tree card has a height slider (2 m by default) and the pot / planted stand')
+  ok((await slide(ids.inside, 3.5)) === undefined, 'An indoor Christmas tree cannot grow taller than the ceiling')
+  ok((await slide(ids.inside, 1.4)) === 1.4, 'An indoor Christmas tree can be made smaller')
+  ok((await slide(ids.outside, 4.8)) === 4.8, 'An outdoor Christmas tree can grow to 4.8 m')
+  ok((await tree(ids.outside))?.variant === 'ground', 'The outdoor preset plants the tree in the ground')
+  // The automatic plan makes a tree from a plug or light named like one; Christmas string lights stay string lights
+  const xmas = await p.evaluate(async () => {
+    const { kindFor } = await import('/src/model/generate.ts')
+    const e = (entity_id, friendly_name) => ({ entity_id, state: 'on', attributes: { friendly_name } })
+    return [kindFor(e('switch.christmas_tree', 'Christmas tree')), kindFor(e('light.christmas_tree_lights', 'Christmas tree lights')), kindFor(e('light.xmas_string_lights', 'Xmas string lights'))]
+  })
+  ok(xmas.join() === 'christmasTree,christmasTree,stringLights', `The automatic plan finds a Christmas tree by name, and Christmas string lights stay string lights (${xmas.join(', ')})`)
+  await p.evaluate((ids) => {
+    const L = window.__homescape.getState().layout
+    L.select(null)
+    L.deleteRoom(ids.den)
+    L.deleteRoom(ids.yard)
+    L.setMode('view')
+  }, ids)
+  await p.waitForTimeout(500)
+}
+
 // Save protection: before a migration a raw copy of the old version is kept; an unreadable record is copied to the rescue key before it can be overwritten
 {
   const pre = await p.evaluate(() => localStorage.getItem('homescape-layout-v1-backup-s1') ?? '')

@@ -1,7 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useMemo } from 'react'
 import * as THREE from 'three'
-import { CATALOG } from '@/model/catalog'
+import { labelYOf } from '@/model/catalog'
 import { labelPoint, rectBounds } from '@/model/geometry'
 import { activeLevel, useLayout } from '@/model/layoutStore'
 import { presetRects, usePlacement } from '@/model/placement'
@@ -19,7 +19,8 @@ function anchorFor(id: string, out: THREE.Vector3) {
     }
     else {
       const base = DEFAULT_Y[target.kind] ?? 0
-      out.set(result.x, result.y != null ? result.y + CATALOG[target.kind].labelY - base : CATALOG[target.kind].labelY, result.z)
+      const ly = labelYOf(target.kind, target.extra?.len)
+      out.set(result.x, result.y != null ? result.y + ly - base : ly, result.z)
     }
     return true
   }
@@ -39,7 +40,8 @@ function anchorFor(id: string, out: THREE.Vector3) {
     if (!it) return false
     // labelY in the catalog is relative to the default height; shift it when the item is raised (e.g. on a table).
     const base = DEFAULT_Y[it.kind] ?? 0
-    out.set(it.x, it.y != null ? it.y + CATALOG[it.kind].labelY - base : CATALOG[it.kind].labelY, it.z)
+    const ly = labelYOf(it.kind, it.len)
+    out.set(it.x, it.y != null ? it.y + ly - base : ly, it.z)
     return true
   }
   return false

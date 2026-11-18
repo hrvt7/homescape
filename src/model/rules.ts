@@ -1,6 +1,6 @@
 import { t } from '@/i18n'
-import { CATALOG, doorWidth, isSlidingDoor, isWallOpening, SLIDING_DOOR, sizeOf, WINDOW_BOTTOM, windowSize } from './catalog'
-import { inRoom, isAperture, rectsOf, roomAt, WALL_H, WALL_IN } from './geometry'
+import { CATALOG, doorWidth, TREE_DEF_H, isSlidingDoor, isWallOpening, SLIDING_DOOR, sizeOf, WINDOW_BOTTOM, windowSize } from './catalog'
+import { inRoom, isAperture, isOutdoor, rectsOf, roomAt, WALL_H, WALL_IN } from './geometry'
 import type { Item, ItemKind, Level, Rect, Room } from './types'
 
 /*
@@ -330,10 +330,15 @@ function fitsRoom(room: Room, box: Box2, t: number) {
   return true
 }
 
+/** Tallest Christmas tree that fits under an indoor ceiling (m) */
+export const TREE_INDOOR_MAX = WALL_H - 0.1
+
 /** Can the item go at this spot? ignoreId: the moved item itself. */
 export function checkItem(level: Level, cand: Cand, ignoreId?: string, onWall = true): Check {
   const room = roomAt(level.rooms, cand.x, cand.z)
   if (!room) return { ok: false, reason: t('Drop it inside a room') }
+  // A Christmas tree's len is its height: indoors it must fit under the ceiling (a little room for the star), outdoors it can be tall
+  if (cand.kind === 'christmasTree' && !isOutdoor(room) && (cand.len ?? TREE_DEF_H) > TREE_INDOOR_MAX + 0.001) return { ok: false, reason: t('Too tall for the ceiling: make it lower or place it outside') }
   const layer = layerOf(cand.kind, cand.y, cand.variant, cand.mount)
   const wallish = snapsToWall(cand.kind, cand.mount)
   if (wallish && (cand.y == null || isWallMounted(cand.kind, cand.variant, cand.mount)) && !onWall && !FREESTANDING.includes(cand.kind)) return { ok: false, reason: t('Move it closer to a wall') }

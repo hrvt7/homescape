@@ -93,6 +93,9 @@ const WATER_HEATER =
   kw(/şofben|sofben|termosifon|water heater|geyser|warmwasser|durchlauferhitzer|calentador|chauffe.?eau|ballon d'eau chaude|scaldabagno|scaldacqua|bojler|podgrzewacz|esquentador|termoacumulador|aquecedor de água|водонагреватель|бойлер|給湯器|温水器|온수기|热水器|गीज़र|गीजर|वॉटर हीटर/)
 const HOT_TUB = kw(/jakuzi|jacuzzi|hot ?tub|\bspa\b|джакузи|ジャグジー|자쿠지|按摩浴缸|जकूज़ी/)
 const FOUNTAIN = kw(/süs havuzu|sus havuzu|çeşme|cesme|fountain|fontan|fontaine|fontein|fuente|springbrunnen|chafariz|фонтан|噴水|분수|喷泉|फव्वारा/)
+/** Christmas tree (its plug or its lights), in the languages of the locales; English needs "tree", so "Xmas string lights" stay string lights */
+const XMAS_TREE =
+  kw(/christmas[ _-]?tree|xmas[ _-]?tree|yılbaşı[ _]ağacı|yilbasi[ _]agaci|çam[ _]ağacı|weihnachtsbaum|tannenbaum|christbaum|árbol[ _]de[ _]navidad|arbol[ _]de[ _]navidad|sapin|arbre[ _]de[ _]noël|arbre[ _]de[ _]noel|albero[ _]di[ _]natale|kerstboom|choinka|árvore[ _]de[ _]natal|arvore[ _]de[ _]natal|arvore[ _]natal|árvore[ _]natal|pinheiro[ _]de[ _]natal|ёлк|новогодн.{0,3}[ _]ел|クリスマスツリー|크리스마스[ _]트리|圣诞树|聖誕樹|क्रिसमस[ _]ट्री/)
 const OUTDOOR_SHOWER =
   kw(/bahçe duş|bahce dus|dış duş|dis dus|outdoor shower|gartendusche|außendusche|aussendusche|ducha exterior|ducha de jard|douche extérieure|douche exterieure|douche de jardin|doccia esterna|doccia da giardino|buitendouche|tuindouche|prysznic ogrodowy|chuveiro exterior|уличный душ|летний душ|屋外シャワー|야외 샤워|户外淋浴|आउटडोर शावर/)
 const SPRINKLER =
@@ -380,6 +383,7 @@ export function kindFor(e: HassEntity, model = ''): ItemKind | null {
   switch (d) {
     case 'light':
       if (/segment/.test(n)) return null
+      if (XMAS_TREE.test(n)) return 'christmasTree'
       if (DIFFUSER.test(n)) return 'diffuser'
       if (CEILING_FAN.test(n)) return 'ceilingFan'
       if (any(LED_STRIP, /backlight/).test(n)) return 'ledStrip'
@@ -409,6 +413,7 @@ export function kindFor(e: HassEntity, model = ''): ItemKind | null {
       if (POOL.test(n)) return 'pool'
       if (HOT_TUB.test(n)) return 'hotTub'
       if (FOUNTAIN.test(n)) return 'fountain'
+      if (XMAS_TREE.test(n)) return 'christmasTree'
       if (OUTDOOR_SHOWER.test(n)) return 'outdoorShower'
       if (SPRINKLER.test(n)) return 'sprinkler'
       if (GRILL.test(n)) return 'grill'

@@ -453,7 +453,8 @@ function FurnitureOptions({ item }: { item: Item }) {
   const range2 = RESIZABLE2[item.kind]
   const { updateItem, checkpoint } = useLayout.getState()
   if (!opt && !range) return null
-  const len = item.len ?? CATALOG[item.kind].size[0]
+  // A kind can give its own default (the Christmas tree's len is its height, 2 m)
+  const len = item.len ?? (range && 'def' in range ? range.def : undefined) ?? CATALOG[item.kind].size[0]
   const len2 = item.len2 ?? range2?.def ?? 0
   const isL = item.variant === 'lLeft' || item.variant === 'lRight'
   /**

@@ -335,7 +335,7 @@ export const CATALOG: Record<ItemKind, KindMeta> = {
   photoFrame: { label: t('Photo frame'), group: 'decor', domains: ['image'], size: [0.2, 0.08], labelY: 0.3 },
   // Three pillar candles; with LED candles bound the flames flicker while on
   candles: { label: t('Candles'), group: 'decor', domains: ['light', 'switch'], size: [0.22, 0.16], labelY: 0.35 },
-  // Christmas tree; the lights twinkle while on
+  // Christmas tree; the lights twinkle while on. Its height is Item.len (catalog TREE); the footprint and label scale with it
   christmasTree: { label: t('Christmas tree'), group: 'decor', domains: ['switch', 'light'], size: [1.0, 1.0], labelY: 2.2 },
   // Floating wall shelf; small items stand on it
   wallShelf: { label: t('Wall shelf'), group: 'decor', domains: [], size: [0.8, 0.22], labelY: 1.8, wall: true },
@@ -932,6 +932,15 @@ export const OPTIONS: Partial<
   yogaMat: { variantLabel: t('Type'), variants: [['flat', t('Rolled out')], ['rolled', t('Rolled up')]], variantDef: 'flat', body: t('Color'), bodyList: ACCENT_COLORS, bodyDef: '#8f6cf0' },
   piano: { variantLabel: t('Type'), variants: [['upright', t('Upright')], ['digital', t('Digital')]], variantDef: 'upright' },
   officeChair: { body: t('Seat color'), bodyList: BODY_COLORS, bodyDef: '#c3c8dc' },
+  christmasTree: {
+    variantLabel: t('Stand'),
+    variants: [
+      ['pot', t('In a pot')],
+      ['ground', t('Planted')],
+    ],
+    variantDef: 'pot',
+    note: t('Bind the smart plug (switch) or light that powers the tree: the lights twinkle and the star glows while it is on. Set its height below; indoors it must fit under the ceiling, outdoors it can grow up to 5 m.'),
+  },
   vase: { variantLabel: t('Type'), variants: [['tulips', t('Tulips')], ['branches', t('Branches')], ['dried', t('Dried flowers')]], variantDef: 'tulips', body: t('Color'), bodyList: BODY_COLORS, bodyDef: '#ffffff' },
   photoFrame: { variantLabel: t('Type'), variants: [['print', t('Printed')], ['digital', t('Digital')]], variantDef: 'print' },
   chevalMirror: { body: t('Frame color'), bodyList: TOP_COLORS, bodyDef: '#8a5a3b' },
@@ -1030,7 +1039,7 @@ export const OPTIONS: Partial<
 }
 
 /** Kinds with adjustable length: length (local x) limits (m); the card shows label when given */
-export const RESIZABLE: Partial<Record<ItemKind, { min: number; max: number; label?: string }>> = {
+export const RESIZABLE: Partial<Record<ItemKind, { min: number; max: number; label?: string; def?: number }>> = {
   desk: { min: 0.8, max: 2.6 },
   kitchenCounter: { min: 0.6, max: 4, label: t('Counter length') },
   kitchenIsland: { min: 1.2, max: 3.6, label: t('Island length') },
@@ -1053,7 +1062,17 @@ export const RESIZABLE: Partial<Record<ItemKind, { min: number; max: number; lab
   planter: { min: 0.6, max: 4, label: t('Planter length') },
   speedBump: { min: 1, max: 10, label: t('Speed bump length') },
   ledStrip: { min: 0.3, max: 8 },
+  christmasTree: { min: 0.6, max: 5, label: t('Tree height'), def: 2 },
 }
+/**
+ * Christmas tree size: Item.len is the tree's HEIGHT (not its width), 2 m by default. The whole model scales with it, so the
+ * footprint (1 m at 2 m), the label, the light it casts and the selection box follow. Indoors it must fit under the ceiling
+ * (rules.ts > checkItem); outdoors it can reach 5 m.
+ */
+export const TREE_DEF_H = 2
+export const treeScale = (len?: number) => (len ?? TREE_DEF_H) / TREE_DEF_H
+/** Height of an item's DOM label: the catalog's labelY, scaled for kinds whose size changes their height (Christmas tree). */
+export const labelYOf = (kind: ItemKind, len?: number) => (kind === 'christmasTree' ? CATALOG[kind].labelY * treeScale(len) : CATALOG[kind].labelY)
 /**
  * Sliding glass door (a door with Item.variant 'sliding', GitHub issue #6): its width is Item.len, set in the card; a hinged
  * door keeps its fixed 1 m.
@@ -1118,6 +1137,8 @@ export const ITEM_PRESETS: ItemPreset[] = [
   { id: 'bedSingle', kind: 'bed', label: t('Single bed'), sub: `${formatNumber(1)} × ${formatNumber(2.1)} m`, extra: { variant: 'single', len: 1 } },
   { id: 'bedKing', kind: 'bed', label: t('King-size bed'), sub: `${formatNumber(2)} × ${formatNumber(2.1)} m`, extra: { variant: 'king', len: 2 } },
   { id: 'loveseat', kind: 'sofa', label: t('Loveseat'), sub: t('2 seats'), extra: { variant: '2', len: 1.6 } },
+  // A big tree planted in the garden or on a terrace; the height slider in its card goes from 0.6 to 5 m
+  { id: 'christmasTreeOutdoor', kind: 'christmasTree', label: t('Outdoor Christmas tree'), sub: t('{h} m · planted', { h: formatNumber(3.5) }), extra: { variant: 'ground', len: 3.5 } },
 ]
 
 /** Window size: width (Item.len), height (Item.len2), bottom edge 0.9 m above the floor (moves with Item.y). */
@@ -1131,6 +1152,8 @@ export function sizeOf(kind: ItemKind, len?: number, len2?: number): [number, nu
   if (kind === 'ceilingStrip' || kind === 'rug' || kind === 'doormat' || kind === 'pool' || kind === 'kitchenIsland') return [len ?? w, len2 ?? d]
   // A ceiling fan is round: the blade span in both directions
   if (kind === 'ceilingFan') return [len ?? w, len ?? d]
+  // A Christmas tree's len is its height; the round footprint grows with it
+  if (kind === 'christmasTree') return [w * treeScale(len), d * treeScale(len)]
   return [len ?? w, d]
 }
 

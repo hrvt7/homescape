@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { deviceClass, domainOf, isActive, num } from '@/ha/derive'
 import type { HassEntity } from '@/ha/types'
 import { formatNumber } from '@/i18n'
+import { treeScale } from '@/model/catalog'
 import { WALL_H } from '@/model/geometry'
 import { assistRing, clockHands, clockText, distanceM, parkingBar, phoneState } from '@/model/household'
 import { markShadows } from '../frame'
@@ -1273,16 +1274,26 @@ export function Candles({ v }: P) {
   )
 }
 
-const TREE_BULBS = Array.from({ length: 22 }, (_, i) => {
-  const y = 0.35 + (i / 22) * 1.3
-  const r = 0.48 * (1 - (y - 0.3) / 1.55)
-  const a = i * 2.4
-  return { x: Math.sin(a) * r, y, z: Math.cos(a) * r, color: ['#ff4f5e', '#f5c04a', '#4fc3ff', '#8fd8bd'][i % 4] }
-})
+/** Bulbs spiralling up the tree (model space, a 2 m tree); taller trees get more of them so they do not look sparse. */
+function treeBulbs(n: number) {
+  return Array.from({ length: n }, (_, i) => {
+    const y = 0.35 + (i / n) * 1.3
+    const r = 0.48 * (1 - (y - 0.3) / 1.55)
+    const a = i * 2.4
+    return { x: Math.sin(a) * r, y, z: Math.cos(a) * r, color: ['#ff4f5e', '#f5c04a', '#4fc3ff', '#8fd8bd'][i % 4] }
+  })
+}
 
-/** Christmas tree in a pot: stacked green cones, baubles and a star; while on the lights twinkle and the star glows. */
+/**
+ * Christmas tree: stacked green cones, baubles and a star; while on (a bound plug or light) the lights twinkle and the star
+ * glows. Drawn as a 2 m tree and scaled to its height (Item.len, catalog TREE_DEF_H). Stand Item.variant: 'pot' (default)
+ * or 'ground' (planted outdoors: a bare trunk in a mound of earth).
+ */
 export function ChristmasTree({ v }: P) {
   const bulbs = useRef<THREE.Group>(null)
+  const k = treeScale(v.opts.len)
+  const planted = v.opts.variant === 'ground'
+  const list = useMemo(() => treeBulbs(k > 1.4 ? 40 : 22), [k])
   useAmbient(v.on, true)
   useFrame(({ clock }) => {
     const g = bulbs.current
@@ -1291,9 +1302,18 @@ export function ChristmasTree({ v }: P) {
     for (let i = 0; i < g.children.length; i++) g.children[i].visible = Math.sin(t * 2.2 + i * 1.3) > -0.5
   })
   return (
-    <group>
-      <Cyl r={0.2} rTop={0.24} h={0.25} position={[0, 0.125, 0]} color="#8a3b3b" segments={20} />
-      <Cyl r={0.04} h={0.2} position={[0, 0.3, 0]} color="#6b4a34" segments={10} />
+    <group scale={k}>
+      {planted ? (
+        <>
+          <Cyl r={0.34} rTop={0.3} h={0.03} position={[0, 0.015, 0]} color="#4a3a2c" segments={20} />
+          <Cyl r={0.05} h={0.36} position={[0, 0.2, 0]} color="#6b4a34" segments={10} />
+        </>
+      ) : (
+        <>
+          <Cyl r={0.2} rTop={0.24} h={0.25} position={[0, 0.125, 0]} color="#8a3b3b" segments={20} />
+          <Cyl r={0.04} h={0.2} position={[0, 0.3, 0]} color="#6b4a34" segments={10} />
+        </>
+      )}
       {[0, 1, 2].map((i) => (
         <mesh key={i} position={[0, 0.65 + i * 0.4, 0]} castShadow>
           <coneGeometry args={[0.5 - i * 0.13, 0.7, 18]} />
@@ -1301,7 +1321,7 @@ export function ChristmasTree({ v }: P) {
         </mesh>
       ))}
       <group ref={bulbs}>
-        {TREE_BULBS.map((b, i) => (
+        {list.map((b, i) => (
           <Ball key={i} r={0.025} position={[b.x, b.y, b.z]} material={glowing(b.color, v.on, 2)} detail={1} shadow={false} />
         ))}
       </group>
