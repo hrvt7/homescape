@@ -4,6 +4,7 @@ import { behindWall, inRoom, isAperture, isOutdoor, rectsOf, roomAt, wallSnap, W
 import { sectionalArm } from './sofa'
 import { wallSides } from './stairs'
 import type { Item, ItemKind, Level, Rect, Room } from './types'
+import { resolveCameraAnchor, type CameraMountData } from './cameraMount'
 
 /*
  * Placement rules (like in a game): an item can only be dropped at a valid spot.
@@ -288,7 +289,7 @@ export function doorZone(x: number, z: number, rot: number, swing: 'in' | 'out' 
 const FREE_NEAR_DOOR: Layer[] = ['rug', 'top', 'ceiling']
 
 /** Candidate being checked: kind, position, rotation; the swing direction for doors. */
-type Cand = Shape & { y?: number; swing?: 'in' | 'out' }
+type Cand = Shape & CameraMountData & { y?: number; swing?: 'in' | 'out' }
 
 /** The passage area of a door item (hinged, sliding or a doorless opening) */
 const zoneOf = (d: Cand) => doorZone(d.x, d.z, d.rot, d.swing, isSlidingDoor(d) || isWallOpening(d) ? { len: doorWidth(d) } : undefined)
@@ -344,6 +345,8 @@ export const TREE_INDOOR_MAX = WALL_H - 0.1
 
 /** Can the item go at this spot? ignoreId: the moved item itself. */
 export function checkItem(level: Level, cand: Cand, ignoreId?: string, onWall = true): Check {
+  // A camera can be mounted on a tree, a fence or a gate (model/cameraMount.ts), outside any room
+  const attachedCamera = resolveCameraAnchor(cand, level.items)
   let room = roomAt(level.rooms, cand.x, cand.z)
   // A wall light may hang on the outside of a house wall with no garden in front: it belongs to the room behind the wall
   if (!room && cand.kind === 'wallLight' && onWall) {
@@ -354,12 +357,12 @@ export function checkItem(level: Level, cand: Cand, ignoreId?: string, onWall = 
       room = roomAt(level.rooms, b.x, b.z)
     }
   }
-  if (!room) return { ok: false, reason: t('Drop it inside a room') }
+  if (!room && !attachedCamera) return { ok: false, reason: t('Drop it inside a room') }
   // A Christmas tree's len is its height: indoors it must fit under the ceiling (a little room for the star), outdoors it can be tall
-  if (cand.kind === 'christmasTree' && !isOutdoor(room) && (cand.len ?? TREE_DEF_H) > TREE_INDOOR_MAX + 0.001) return { ok: false, reason: t('Too tall for the ceiling: make it lower or place it outside') }
+  if (room && cand.kind === 'christmasTree' && !isOutdoor(room) && (cand.len ?? TREE_DEF_H) > TREE_INDOOR_MAX + 0.001) return { ok: false, reason: t('Too tall for the ceiling: make it lower or place it outside') }
   const layer = layerOf(cand.kind, cand.y, cand.variant, cand.mount)
   const wallish = snapsToWall(cand.kind, cand.mount)
-  if (wallish && (cand.y == null || isWallMounted(cand.kind, cand.variant, cand.mount)) && !onWall && !FREESTANDING.includes(cand.kind)) return { ok: false, reason: t('Move it closer to a wall') }
+  if (!attachedCamera && wallish && (cand.y == null || isWallMounted(cand.kind, cand.variant, cand.mount)) && !onWall && !FREESTANDING.includes(cand.kind)) return { ok: false, reason: t('Move it closer to a wall') }
 
   if (DESK_ONLY.includes(cand.kind) && cand.y == null) return { ok: false, reason: t('Put it on a desk or a table') }
   // A wall-mounted item must stay within the wall (height and window size)
@@ -369,7 +372,7 @@ export function checkItem(level: Level, cand: Cand, ignoreId?: string, onWall = 
   }
   const boxes = footprints(cand, 0.04)
   // The backs of wall items touch the wall; no overflow check for them.
-  if (layer !== 'top' && layer !== 'ceiling' && !(wallish && layer !== 'floor') && !boxes.every((b) => fitsRoom(room, b, 0.02))) {
+  if (room && layer !== 'top' && layer !== 'ceiling' && !(wallish && layer !== 'floor') && !boxes.every((b) => fitsRoom(room, b, 0.02))) {
     return { ok: false, reason: t('Sticks out of the room') }
   }
   // The ceiling strip is a ring around the room: it collides with nothing.

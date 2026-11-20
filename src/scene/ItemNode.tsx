@@ -193,6 +193,8 @@ function ItemNodeImpl({ item, entity, related, night, levelId, still = false }: 
    * While moving the rules are checked (the ring turns red); dropped on an invalid spot, the item goes back.
    */
   const onDown = (e: ThreeEvent<PointerEvent>) => {
+    // A camera on a tree, a fence or a gate stays on it (model/cameraMount.ts): it moves with its support or from its card
+    if (item.kind === 'camera' && item.mountTargetId && (item.mountSurface ?? 'wall') !== 'wall') return
     const s = useLayout.getState()
     if (s.mode !== 'edit' || s.tool !== 'select' || e.button !== 0 || busy()) return
     if (!e.ray.intersectPlane(plane, hit)) return

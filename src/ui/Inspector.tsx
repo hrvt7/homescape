@@ -29,6 +29,7 @@ import { rotateRoom } from './rotateRoom'
 import { regenerateFromHa } from './regenerate'
 import { KIND_ICON } from './kindIcons'
 import { fmt, type RoomStats } from './useHome'
+import { CAMERA_BASE_HEIGHT, CAMERA_SUPPORTS, defaultCameraHeight, type CameraMountSurface } from '@/model/cameraMount'
 
 const panel = 'glass pointer-events-auto flex max-h-full flex-col overflow-hidden rounded-2xl'
 /** Card body: a single column that never scrolls sideways (index.css > .panel-body). */
@@ -242,6 +243,8 @@ function WindowPresets({ item }: { item: Item }) {
 
 /** Height of a wall-mounted item: its center above the floor (m). The slider changes Item.y and is checked against the rules (ui/mount.ts). */
 function MountHeight({ item }: { item: Item }) {
+  // A camera on a tree, a fence or a gate sets its height in its mount settings (CameraMountOptions)
+  if (item.kind === 'camera' && (item.mountSurface ?? 'wall') !== 'wall') return null
   if (!isWallMounted(item.kind, item.variant, item.mount)) return null
   const { min, max } = mountRange(item.kind, item.variant, item.len2)
   const base = mountY(item)
@@ -1104,6 +1107,107 @@ function Placement({ item }: { item: Item }) {
   )
 }
 
+/** Where a camera hangs (model/cameraMount.ts): on a house wall, or outside on a tree, a fence or a gate, and how. */
+function CameraMountOptions({ item }: { item: Item }) {
+  const items = useLayout((s) => activeLevel(s)?.items)
+  if (item.kind !== 'camera' || !items) return null
+  const { updateItem, checkpoint } = useLayout.getState()
+  const surface = item.mountSurface ?? 'wall'
+  const supportsOf = (s: CameraMountSurface) => (s === 'wall' ? [] : items.filter((o) => o.kind === CAMERA_SUPPORTS[s].kind))
+  const available = supportsOf(surface)
+  const points = surface === 'wall' ? [] : CAMERA_SUPPORTS[surface].points
+  const POINT: Record<NonNullable<Item['mountPoint']>, string> = { trunk: t('Trunk'), panel: t('Panel / rail'), postLeft: t('Left post'), postRight: t('Right post'), postCenter: t('Middle post') }
+  const height = CAMERA_BASE_HEIGHT + (item.y ?? 0)
+  // The camera follows its support by itself (layoutStore > change); a card change only sets how it is mounted
+  const changeSurface = (next: CameraMountSurface) => {
+    if (next !== 'wall') {
+      const first = supportsOf(next)[0]
+      if (first) updateItem(item.id, { mountSurface: next, mountTargetId: first.id, mountPoint: CAMERA_SUPPORTS[next].points[0], mountYaw: 0, mountSide: undefined, y: defaultCameraHeight(next) - CAMERA_BASE_HEIGHT })
+      return
+    }
+    // Back on the house: onto the closest wall
+    const level = activeLevel(useLayout.getState())
+    if (!level) return
+    const w = wallSnap(level.rooms, item.x, item.z, CATALOG.camera.size[1], 100, sizeOf('camera')[0], false, false, wallTop({ kind: 'camera' }), stairsWallRuns(level.items))
+    const chk = w ? checkItem(level, { kind: 'camera', x: w.x, z: w.z, rot: w.rot }, item.id) : { ok: false, reason: t('Move it closer to a wall') }
+    if (!w || !chk.ok) return useHa.setState({ notice: t("This setting doesn't fit: {reason}", { reason: chk.reason ?? '' }) })
+    updateItem(item.id, { x: w.x, z: w.z, rot: w.rot, y: undefined, mountSurface: undefined, mountTargetId: undefined, mountPoint: undefined, mountYaw: undefined, mountSide: undefined })
+  }
+  const surfaces: [CameraMountSurface, string][] = [
+    ['wall', t('Building wall')],
+    ['tree', t('Tree')],
+    ['fence', t('Fence')],
+    ['gate', t('Gate post')],
+  ]
+  return (
+    <div className="grid gap-3">
+      <div className="grid gap-1.5">
+        <span className="text-[12px] font-semibold text-ink-2">{t('Camera mounting surface')}</span>
+        <div className="grid grid-cols-2 gap-1.5">
+          {surfaces.map(([value, label]) => (
+            <button key={value} type="button" data-camera-surface={value} disabled={value !== 'wall' && !supportsOf(value).length} className={`${seg(surface === value)} disabled:opacity-40`} onClick={() => changeSurface(value)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {surfaces.every(([value]) => value === 'wall' || !supportsOf(value).length) && <span className="text-[11px] text-ink-3">{t('Add a matching tree, fence, or gate first.')}</span>}
+      </div>
+      {surface !== 'wall' && (
+        <>
+          <label className="grid gap-1.5">
+            <span className="text-[12px] font-semibold text-ink-2">{t('Mount to')}</span>
+            <select value={item.mountTargetId ?? ''} onChange={(e) => e.target.value && updateItem(item.id, { mountTargetId: e.target.value })} className="min-h-10 rounded-xl border border-line bg-surface px-3 text-[13px]">
+              {!available.length && <option value="">{t('No matching objects')}</option>}
+              {available.map((o, i) => (
+                <option key={o.id} value={o.id}>
+                  {o.name || `${CATALOG[o.kind].label} ${i + 1}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="grid gap-1.5">
+            <span className="text-[12px] font-semibold text-ink-2">{t('Mounting position')}</span>
+            <div className="grid grid-cols-2 gap-1.5">
+              {points.map((point) => (
+                <button key={point} type="button" className={seg((item.mountPoint ?? points[0]) === point)} onClick={() => updateItem(item.id, { mountPoint: point })}>
+                  {POINT[point]}
+                </button>
+              ))}
+            </div>
+          </div>
+          {(surface === 'fence' || surface === 'gate') && (
+            <div className="grid gap-1.5">
+              <span className="text-[12px] font-semibold text-ink-2">{t('Mounting side')}</span>
+              <div className="flex gap-1.5">
+                <button type="button" className={seg(item.mountSide !== 'back')} onClick={() => updateItem(item.id, { mountSide: undefined })}>
+                  {t('Front')}
+                </button>
+                <button type="button" className={seg(item.mountSide === 'back')} onClick={() => updateItem(item.id, { mountSide: 'back' })}>
+                  {t('Back')}
+                </button>
+              </div>
+            </div>
+          )}
+          <label className="grid gap-1.5">
+            <span className="flex justify-between text-[12px] font-semibold text-ink-2">
+              {t('Mounting height')}
+              <span className="font-mono tabular-nums text-ink">{fmt(height, 2)} m</span>
+            </span>
+            <input type="range" min={0.4} max={surface === 'tree' ? 3.5 : 1.3} step={0.05} value={height} onPointerDown={() => checkpoint()} onChange={(e) => updateItem(item.id, { y: Number(e.target.value) - CAMERA_BASE_HEIGHT }, false)} />
+          </label>
+          <label className="grid gap-1.5">
+            <span className="flex justify-between text-[12px] font-semibold text-ink-2">
+              {t('Camera direction')}
+              <span className="font-mono tabular-nums text-ink">{item.mountYaw ?? 0}°</span>
+            </span>
+            <input type="range" min={0} max={355} step={5} value={item.mountYaw ?? 0} onPointerDown={() => checkpoint()} onChange={(e) => updateItem(item.id, { mountYaw: Number(e.target.value) }, false)} />
+          </label>
+        </>
+      )}
+    </div>
+  )
+}
+
 /** Cover of a utility light: bare tubes, a flat frosted panel, a wraparound diffuser or a louvered grid. */
 function UtilityCoverOptions({ item }: { item: Item }) {
   if (item.kind !== 'utilityLight') return null
@@ -1160,6 +1264,7 @@ function ItemEdit({ item, room }: { item: Item; room?: Room }) {
         <Placement item={item} />
         <WindowPresets item={item} />
         <MountHeight item={item} />
+        <CameraMountOptions item={item} />
         <FurnitureOptions item={item} />
         <UtilityCoverOptions item={item} />
         <LightIntensity item={item} />
@@ -1168,18 +1273,35 @@ function ItemEdit({ item, room }: { item: Item; room?: Room }) {
         <GroupInfo item={item} />
         <BindingEditor key={item.id} item={item} room={room} />
 
-        <div className="grid gap-1.5">
-          <span className="text-[12px] font-semibold text-ink-2">{t('Rotate')}</span>
-          <div className="flex gap-2">
-            {[-90, -15, 15, 90].map((d) => (
-              <button key={d} type="button" onClick={() => rotate(d)} className="flex min-h-10 flex-1 items-center justify-center gap-1 rounded-lg bg-surface-2 text-[12.5px] font-semibold text-ink-2 hover:bg-surface hover:text-ink">
-                {d < 0 ? <RotateCcw size={13} /> : <RotateCw size={13} />}
-                {Math.abs(d)}°
-              </button>
-            ))}
+               {!(
+          item.kind === 'camera' &&
+          item.mountSurface &&
+          item.mountSurface !== 'wall'
+        ) && (
+          <div className="grid gap-1.5">
+            <span className="text-[12px] font-semibold text-ink-2">
+              {t('Rotate')}
+            </span>
+
+            <div className="flex gap-2">
+              {[-90, -15, 15, 90].map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => rotate(d)}
+                  className="flex min-h-10 flex-1 items-center justify-center gap-1 rounded-lg bg-surface-2 text-[12.5px] font-semibold text-ink-2 hover:bg-surface hover:text-ink"
+                >
+                  {d < 0 ? <RotateCcw size={13} /> : <RotateCw size={13} />}
+                  {Math.abs(d)}°
+                </button>
+              ))}
+            </div>
+
+            <p className="text-[11px] text-ink-3">
+              {t('Tip: drag the item to move it; wall items snap to the nearest wall. The R key rotates by 90°.')}
+            </p>
           </div>
-          <p className="text-[11px] text-ink-3">{t('Tip: drag the item to move it; wall items snap to the nearest wall. The R key rotates by 90°.')}</p>
-        </div>
+        )}
       </div>
       <div className="flex gap-2 border-t border-line px-5 py-3">
         <button type="button" onClick={() => duplicateItem(item.id)} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-line py-2 text-[13px] font-semibold text-ink-2 hover:bg-surface-2">

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { t } from '@/i18n'
 import { rectBounds } from './geometry'
+import type { CameraMountData } from './cameraMount'
 import type { FloorMaterial, Item, ItemKind, Rect, RoomType } from './types'
 
 /*
@@ -78,7 +79,7 @@ interface PlacementState {
   screen: { x: number; y: number } | null
   overCanvas: boolean
   /** Result computed by the Ghost */
-  result: { x: number; z: number; rot: number; y?: number; ok: boolean; reason?: string } | null
+  result: ({ x: number; z: number; rot: number; y?: number; ok: boolean; reason?: string } & CameraMountData) | null
   /** Validity while an existing item is dragged (for the spot marker) */
   moving: { id: string; ok: boolean; reason?: string } | null
 
