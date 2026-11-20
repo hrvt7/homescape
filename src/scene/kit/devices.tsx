@@ -68,10 +68,73 @@ export function DeskLamp({ v }: P) {
 
 export function WallLight({ v }: P) {
   const shade = useLitMaterial(C.white, v.on, v.color, v.level, 1.2)
+  // Lanterns and sconces for an outside wall (Item.variant); the indoor light is the original one
+  if ((v.opts.variant ?? 'indoor') !== 'indoor') return <OutdoorWallLight v={v} bulb={shade} />
   return (
     <group>
-      <Box size={[0.14, 0.2, 0.03]} position={[0, 1.95, -0.08]} color={C.steel} shadow={false} />
+      <Box size={[0.14, 0.2, 0.03]} position={[0, 1.95, -0.08]} color={v.opts.body ?? C.steel} shadow={false} />
       <Cyl r={0.13} rTop={0.08} h={0.18} position={[0, 2.0, 0.02]} material={shade} />
+    </group>
+  )
+}
+
+/** Outdoor wall light: a traditional, modern or farmhouse lantern, a gooseneck, an up/down sconce or a bulkhead. */
+function OutdoorWallLight({ v, bulb }: P & { bulb: THREE.Material }) {
+  const variant = v.opts.variant ?? 'traditional'
+  const frame = v.opts.body ?? '#26282c'
+  const glass = mat('#dce8ed', { opacity: 0.15, roughness: 0.15 })
+  const lantern = variant === 'traditional' || variant === 'modern' || variant === 'farmhouse'
+  return (
+    <group position={[0, 2.0, 0]}>
+      {/* Plate on the wall */}
+      <Box size={[0.12, 0.23, 0.025]} position={[0, 0, -0.125]} color={frame} radius={0.008} />
+      {lantern && (
+        <group>
+          {/* Arm, base, four corner posts and glass on three sides around the bulb */}
+          <Box size={[0.045, 0.045, 0.1]} position={[0, 0.12, -0.075]} color={frame} />
+          <Box size={[0.2, 0.025, 0.18]} position={[0, -0.18, 0.02]} color={frame} />
+          {[-1, 1].flatMap((x) => [-1, 1].map((z) => <Box key={`${x}${z}`} size={[0.015, 0.34, 0.015]} position={[x * 0.09, -0.005, 0.02 + z * 0.08]} color={frame} />))}
+          <Box size={[0.18, 0.32, 0.005]} position={[0, -0.005, 0.1]} material={glass} shadow={false} />
+          {[-1, 1].map((s) => (
+            <Box key={s} size={[0.005, 0.32, 0.16]} position={[s * 0.09, -0.005, 0.02]} material={glass} shadow={false} />
+          ))}
+          <Cyl r={0.045} h={0.06} position={[0, -0.12, 0.02]} color={frame} />
+          <Ball r={0.055} position={[0, -0.015, 0.02]} material={bulb} shadow={false} />
+          {/* Roof: peaked (traditional), flat (modern) or a broad cap (farmhouse) */}
+          {variant === 'traditional' && <Cyl r={0.155} rTop={0.018} h={0.085} segments={4} rotation={[0, Math.PI / 4, 0]} position={[0, 0.215, 0.02]} color={frame} />}
+          {variant === 'modern' && <Box size={[0.21, 0.035, 0.19]} position={[0, 0.185, 0.02]} color={frame} radius={0.005} />}
+          {variant === 'farmhouse' && <Cyl r={0.125} rTop={0.05} h={0.075} position={[0, 0.205, 0]} color={frame} />}
+        </group>
+      )}
+      {/* Gooseneck: an arm out of the wall bending down into a shade */}
+      {variant === 'gooseneck' && (
+        <group>
+          <Cyl r={0.018} h={0.13} rotation={[Math.PI / 2, 0, 0]} position={[0, 0.16, -0.06]} color={frame} />
+          <Ball r={0.025} position={[0, 0.16, 0.005]} color={frame} />
+          <Cyl r={0.018} h={0.1} position={[0, 0.11, 0.005]} color={frame} />
+          <Cyl r={0.12} rTop={0.04} h={0.09} position={[0, 0.025, 0.005]} color={frame} />
+          <Ball r={0.048} position={[0, -0.04, 0.005]} material={bulb} shadow={false} />
+        </group>
+      )}
+      {/* Up/down sconce: a cylinder glowing at both ends */}
+      {variant === 'upDown' && (
+        <group>
+          <Cyl r={0.08} h={0.34} position={[0, 0, 0.015]} color={frame} />
+          {[-1, 1].map((s) => (
+            <Cyl key={s} r={0.065} h={0.013} position={[0, s * 0.175, 0.015]} material={bulb} shadow={false} />
+          ))}
+        </group>
+      )}
+      {/* Bulkhead: a rounded box with a glowing lens behind two bars */}
+      {variant === 'bulkhead' && (
+        <group>
+          <Box size={[0.3, 0.21, 0.11]} position={[0, 0, -0.05]} color={frame} radius={0.025} />
+          <Box size={[0.265, 0.175, 0.045]} position={[0, 0, 0.025]} material={bulb} radius={0.025} shadow={false} />
+          {[-1, 1].map((s) => (
+            <Box key={s} size={[0.014, 0.175, 0.014]} position={[s * 0.055, 0, 0.055]} color={frame} />
+          ))}
+        </group>
+      )}
     </group>
   )
 }

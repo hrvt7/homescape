@@ -1,6 +1,6 @@
 import { t } from '@/i18n'
 import { CATALOG, doorWidth, TREE_DEF_H, isSlidingDoor, isWallOpening, SLIDING_DOOR, sizeOf, WINDOW_BOTTOM, windowSize } from './catalog'
-import { inRoom, isAperture, isOutdoor, rectsOf, roomAt, WALL_H, WALL_IN, WALL_T } from './geometry'
+import { behindWall, inRoom, isAperture, isOutdoor, rectsOf, roomAt, wallSnap, WALL_H, WALL_IN, WALL_T } from './geometry'
 import { sectionalArm } from './sofa'
 import { wallSides } from './stairs'
 import type { Item, ItemKind, Level, Rect, Room } from './types'
@@ -88,6 +88,8 @@ const WALL_SPAN: Record<string, [number, number]> = {
   hoseReel: [0.2, 0.75],
 }
 function spanOf(kind: ItemKind, variant?: string, len2?: number): [number, number] {
+  // An outdoor lantern is taller than the indoor wall light
+  if (kind === 'wallLight' && variant && variant !== 'indoor') return [1.72, 2.28]
   // Window: bottom edge 0.9 (sill 3 cm below), curtain rail 10 cm on top; height Item.len2
   if (kind === 'window') return [WINDOW_BOTTOM - 0.03, WINDOW_BOTTOM + windowSize({ len2 }).h + 0.1]
   return WALL_SPAN[kind === 'mirror' ? `mirror:${variant ?? 'tall'}` : kind === 'tv' ? 'tv:wall' : kind] ?? [0, WALL_H]
@@ -342,7 +344,16 @@ export const TREE_INDOOR_MAX = WALL_H - 0.1
 
 /** Can the item go at this spot? ignoreId: the moved item itself. */
 export function checkItem(level: Level, cand: Cand, ignoreId?: string, onWall = true): Check {
-  const room = roomAt(level.rooms, cand.x, cand.z)
+  let room = roomAt(level.rooms, cand.x, cand.z)
+  // A wall light may hang on the outside of a house wall with no garden in front: it belongs to the room behind the wall
+  if (!room && cand.kind === 'wallLight' && onWall) {
+    const w = wallSnap(level.rooms, cand.x, cand.z, CATALOG.wallLight.size[1], 0.05, sizeOf(cand.kind, cand.len)[0], false, false, wallTop(cand), [], true)
+    const turn = w ? Math.abs(Math.atan2(Math.sin(w.rot - cand.rot), Math.cos(w.rot - cand.rot))) : 1
+    if (w && turn < 0.01 && Math.hypot(w.x - cand.x, w.z - cand.z) < 0.03) {
+      const b = behindWall(cand)
+      room = roomAt(level.rooms, b.x, b.z)
+    }
+  }
   if (!room) return { ok: false, reason: t('Drop it inside a room') }
   // A Christmas tree's len is its height: indoors it must fit under the ceiling (a little room for the star), outdoors it can be tall
   if (cand.kind === 'christmasTree' && !isOutdoor(room) && (cand.len ?? TREE_DEF_H) > TREE_INDOOR_MAX + 0.001) return { ok: false, reason: t('Too tall for the ceiling: make it lower or place it outside') }
