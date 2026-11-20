@@ -1104,6 +1104,31 @@ function Placement({ item }: { item: Item }) {
   )
 }
 
+/** Cover of a utility light: bare tubes, a flat frosted panel, a wraparound diffuser or a louvered grid. */
+function UtilityCoverOptions({ item }: { item: Item }) {
+  if (item.kind !== 'utilityLight') return null
+  const choices: [NonNullable<Item['cover']>, string][] = [
+    ['none', t('Exposed tubes')],
+    ['frosted', t('Flat frosted cover')],
+    ['wrap', t('Wraparound diffuser')],
+    ['louver', t('Louvered grid')],
+  ]
+  const current = item.cover ?? 'none'
+  return (
+    <div className="grid gap-1.5">
+      <span className="text-[12px] font-semibold text-ink-2">{t('Cover style')}</span>
+      <div className="grid grid-cols-2 gap-1.5">
+        {choices.map(([value, label]) => (
+          <button key={value} type="button" className={seg(current === value)} onClick={() => useLayout.getState().updateItem(item.id, { cover: value === 'none' ? undefined : value })}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11px] text-ink-3">{t('Choose a cover or leave the fixture tubes exposed.')}</p>
+    </div>
+  )
+}
+
 function ItemEdit({ item, room }: { item: Item; room?: Room }) {
   const { updateItem, deleteItem, duplicateItem, select } = useLayout.getState()
   const entity = useHa((s) => (item.entityId ? s.entities[item.entityId] : undefined))
@@ -1136,6 +1161,7 @@ function ItemEdit({ item, room }: { item: Item; room?: Room }) {
         <WindowPresets item={item} />
         <MountHeight item={item} />
         <FurnitureOptions item={item} />
+        <UtilityCoverOptions item={item} />
         <LightIntensity item={item} />
         <BeamAngle item={item} />
 
