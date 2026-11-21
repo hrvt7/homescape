@@ -408,6 +408,10 @@ export interface Item {
    * bind / unbind / makeMain).
    */
   group?: string
+  /** Tilt of a garden spotlight, degrees from vertical (20 when not set) */
+  tilt?: number
+  /** Power source of a garden light (wired when not set): an unbound solar light turns on by itself at night */
+  powerSource?: 'wired' | 'solar' | 'battery'
 }
 
 /** A level (floor). */

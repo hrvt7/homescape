@@ -10,7 +10,7 @@ import type { HassEntity } from '@/ha/types'
 import { toggle } from '@/ha/actions'
 import { t } from '@/i18n'
 import { isBound } from '@/model/bindings'
-import { CATALOG, isLightKind, sizeOf } from '@/model/catalog'
+import { CATALOG, isLightKind, sizeOf, SOLAR_LIGHT } from '@/model/catalog'
 import { backOnWall, doorSides, HALF_WALL_H, isAperture, isOutdoor, openingOnHalfWall, snap, wallSnap } from '@/model/geometry'
 import { activeLevel, useLayout } from '@/model/layoutStore'
 import { usePlacement } from '@/model/placement'
@@ -94,15 +94,15 @@ function ItemNodeImpl({ item, entity, related, night, levelId, still = false }: 
   const swingOut = item.swing === 'out'
   const fixed = item.kind === 'window' && Boolean(item.fixed)
   const double = item.kind === 'window' && !fixed && Boolean(item.double)
-  const { len, drawers, top, body, fedAt, shape, variant, cover, len2, led, ledEntity, intensity, mount, beam, sink, dishwasher, walls } = item
+  const { len, drawers, top, body, fedAt, shape, variant, cover, len2, led, ledEntity, intensity, mount, beam, sink, dishwasher, walls, tilt, powerSource } = item
   // Built-in sink of the kitchen counter (model/counter.ts): in the middle unless there is a separate sink next to it
   const sinkAt = useLayout((s) => (item.kind === 'kitchenCounter' ? (counterSink(lvOf(s)?.items ?? [], item) ?? undefined) : undefined))
   // A doorless opening in a half wall is as high as the wall
   const halfOpening = useLayout((s) => item.kind === 'door' && item.variant === 'opening' && openingOnHalfWall(item, lvOf(s)?.rooms ?? []))
   const openingHeight = halfOpening ? HALF_WALL_H : len2
   const opts = useMemo(
-    () => ({ len, drawers, top, body, fedAt, shape, variant, cover, len2: openingHeight, led, ledEntity, intensity, mount, beam, sinkAt, sink, dishwasher, walls }),
-    [len, drawers, top, body, fedAt, shape, variant, cover, openingHeight, led, ledEntity, intensity, mount, beam, sinkAt, sink, dishwasher, walls],
+    () => ({ len, drawers, top, body, fedAt, shape, variant, cover, len2: openingHeight, led, ledEntity, intensity, mount, beam, sinkAt, sink, dishwasher, walls, tilt, powerSource }),
+    [len, drawers, top, body, fedAt, shape, variant, cover, openingHeight, led, ledEntity, intensity, mount, beam, sinkAt, sink, dishwasher, walls, tilt, powerSource],
   )
   useCursor(hover && interactive && !busy())
   // If the quick on/off pill opens on this item, it is placed by this group's body (scene/QuickAnchor.tsx)
@@ -164,7 +164,12 @@ function ItemNodeImpl({ item, entity, related, night, levelId, still = false }: 
 
   const v: Visual = useMemo(() => {
     const opening = { related, interior, hingeRight, swingOut, fixed, double, free, edit, opts, at: { x: item.x, z: item.z, rot: item.rot, y: item.y } }
-    if (!entity) return { ...OFF_VISUAL, bound: Boolean(item.entityId), night, unavailable: Boolean(item.entityId), ...opening, open: open ? 1 : 0, openParts }
+    if (!entity) {
+      // An unbound solar garden light turns on by itself at night (roomLights.ts lights the garden)
+      const solar = item.kind === 'gardenLight' && opts.powerSource === 'solar' && !item.entityId && night
+      const glow = solar ? { on: true, level: intensity ?? 1, color: SOLAR_LIGHT } : {}
+      return { ...OFF_VISUAL, bound: Boolean(item.entityId), night, unavailable: Boolean(item.entityId), ...opening, ...glow, open: open ? 1 : 0, openParts }
+    }
     const on = isActive(entity)
     return {
       ...opening,
