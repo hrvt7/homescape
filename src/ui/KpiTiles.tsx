@@ -6,6 +6,7 @@ import { t } from '@/i18n'
 import { AlarmControl, alarmTone } from './AlarmControl'
 import { fmt, type HomeTotals } from './useHome'
 import { WeatherTile } from './WeatherTile'
+import { EnergyTile } from './EnergyPanel'
 
 function Tile({ icon: Icon, label, value, sub, hot }: { icon: LucideIcon; label: string; value: string; sub: string; hot?: boolean }) {
   return (
@@ -55,6 +56,7 @@ export default function KpiTiles({ totals }: { totals: HomeTotals }) {
     // When the right panel narrows or closes (ui/panelState.ts, --panel) the tiles widen; the quick pill avoids them (#kpi-tiles).
     // Only the tiles take the pointer: when they wrap, the empty end of the second row lets the scene below be hovered
     <div id="kpi-tiles" className="pointer-events-none absolute left-4 top-4 z-30 hidden max-w-[calc(100%-var(--panel)-76px)] flex-wrap gap-2 *:pointer-events-auto lg:flex xl:gap-3">
+      <EnergyTile />
       <Tile icon={Lightbulb} label={t('Lights on')} value={`${totals.lightsOn}/${totals.lights}`} sub={t('lights in the plan')} hot={totals.lightsOn > 0} />
       <Tile icon={Thermometer} label={t('Average temperature')} value={`${fmt(totals.avgTemp)}°`} sub={t('rooms with sensors')} />
       <WeatherTile />

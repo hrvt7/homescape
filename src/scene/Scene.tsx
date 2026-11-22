@@ -36,6 +36,7 @@ import { Roofs } from './Roofs'
 import { daylight, lightDebug, sunDirection, sunOf, sunStrength, sunWarmth, type RealSun } from './sun'
 import { useNight } from './useNight'
 import { Weather } from './Weather'
+import { EnergyFlow } from './EnergyFlow'
 import { weatherLight } from './weatherState'
 
 // Stairwells on upper floors are blocked in the walking grid of people and pets (model/pets.ts, model/stairwell.ts)
@@ -575,6 +576,7 @@ function Contents() {
       {apartment && <ApartmentFacade />}
       <Levels night={night} />
       <Roofs />
+      <EnergyFlow />
       <RoomHandles />
       <Ghost />
     </>

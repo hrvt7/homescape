@@ -34,6 +34,8 @@ import SearchPalette from '@/ui/SearchPalette'
 import EditToolbar from '@/ui/EditToolbar'
 import Inspector from '@/ui/Inspector'
 import KpiTiles from '@/ui/KpiTiles'
+import EnergyPanel, { EnergyFab, EnergyLabels } from '@/ui/EnergyPanel'
+import { startEnergy } from '@/energy/store'
 import MapControls from '@/ui/MapControls'
 import PinLayer from '@/ui/PinLayer'
 import RoomBar from '@/ui/RoomBar'
@@ -468,6 +470,8 @@ export default function App() {
 
   // The home plan is kept in the live Home Assistant and synced between devices (ha/planSync.ts)
   useEffect(() => startPlanSync(), [])
+  // Energy layer engine: loads, solar, battery, today's totals (energy/store.ts)
+  useEffect(() => startEnergy(), [])
 
   // The right panel's width and open state live in CSS variables (the tool column, middle bands and bottom card follow them)
   useEffect(() => {
@@ -588,6 +592,7 @@ export default function App() {
         <QuickPill />
       </div>
       {!fps && <PinLayer stats={stats} />}
+      {!fps && mode === 'view' && <EnergyLabels />}
       <div className="pointer-events-none absolute inset-0 flex flex-col">
         <TopBar onConnect={() => setConnectOpen(true)} />
         <div className="relative flex-1">
@@ -601,6 +606,8 @@ export default function App() {
               {!dashboard && (
                 <>
                   {mode === 'view' ? <KpiTiles totals={totals} /> : <EditToolbar />}
+                  {mode === 'view' && <EnergyPanel />}
+                  {mode === 'view' && <EnergyFab />}
                   <MapControls />
                   <Inspector stats={stats} />
                   {mode === 'edit' ? <BuildBar /> : <RoomBar stats={stats} />}
